@@ -120,7 +120,7 @@ button{touch-action:manipulation;-webkit-tap-highlight-color:transparent}
 .nav-section-label{padding:18px 13px 6px;color:#9aa0a6;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em}
 
 /* ══════════════════════════════════════════════════════════════
-   v7 Cloud sync pill (added for D1 backend)
+   v7 Cloud sync pill
    ══════════════════════════════════════════════════════════════ */
 .sync-pill{
   display:inline-flex;align-items:center;gap:7px;
@@ -139,8 +139,19 @@ button{touch-action:manipulation;-webkit-tap-highlight-color:transparent}
 .sync-pill[data-status="syncing"]{color:#b06000;border-color:#fde2b8;background:#fffbf3}
 @keyframes syncPulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.45;transform:scale(.85)}}
 
+/* ══════════════════════════════════════════════════════════════
+   v8 Logo image support
+   ══════════════════════════════════════════════════════════════ */
+.brand-logo{
+  display:block;
+  border-radius:9px;
+  object-fit:cover;
+  flex-shrink:0;
+}
+
 @media(max-width:560px){
   .sync-pill{padding:6px 9px}
   .sync-pill span#syncLabel{display:none}
   .sync-pill i{width:8px;height:8px}
+  .brand-logo{height:30px;border-radius:7px}
 }
