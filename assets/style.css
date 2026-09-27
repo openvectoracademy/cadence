@@ -218,30 +218,37 @@ button{touch-action:manipulation;-webkit-tap-highlight-color:transparent}
 }
 
 /* ══════════════════════════════════════════════════════════════
-   v10 Mobile header brand (logo + name)
+   v10 Mobile header brand — bulletproof alignment
+   Line-height on text = logo height, so text baseline sits dead-centre
    ══════════════════════════════════════════════════════════════ */
 .mobile-brand{
   display:none;
   align-items:center;
-  gap:9px;
-  font-weight:700;
-  letter-spacing:.08em;
-  font-size:14px;
-  color:var(--text);
+  gap:8px;
   white-space:nowrap;
   min-width:0;
+  font:inherit;
 }
 .mobile-brand-logo{
-  display:block;
-  border-radius:7px;
-  object-fit:cover;
-  flex-shrink:0;
+  display:inline-block;
   height:32px;
   width:32px;
+  border-radius:7px;
+  object-fit:cover;
+  vertical-align:middle;
+  flex-shrink:0;
+  margin:0;
 }
 .mobile-brand-name{
   display:inline-block;
-  line-height:1;
+  font-size:14px;
+  font-weight:700;
+  letter-spacing:.08em;
+  line-height:32px;       /* matches logo height exactly */
+  vertical-align:middle;
+  color:var(--text);
+  margin:0;
+  padding:0;
 }
 
 @media(max-width:900px){
@@ -253,8 +260,9 @@ button{touch-action:manipulation;-webkit-tap-highlight-color:transparent}
   .sync-pill span#syncLabel{display:none}
   .sync-pill i{width:8px;height:8px}
   .brand-logo{height:36px;border-radius:8px}
-  .mobile-brand{gap:8px;font-size:13px}
+  .mobile-brand{gap:7px}
   .mobile-brand-logo{height:30px;width:30px;border-radius:6px}
+  .mobile-brand-name{font-size:13px;line-height:30px}
   .exam-countdown{
     grid-template-columns:repeat(4,1fr);
     gap:6px;
@@ -268,4 +276,6 @@ button{touch-action:manipulation;-webkit-tap-highlight-color:transparent}
 
 @media(max-width:380px){
   .mobile-brand-name{font-size:12px;letter-spacing:.06em}
+  .mobile-brand-logo{height:28px;width:28px}
+  .mobile-brand-name{line-height:28px}
 }
