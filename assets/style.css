@@ -119,213 +119,28 @@ button{touch-action:manipulation;-webkit-tap-highlight-color:transparent}
 
 .nav-section-label{padding:18px 13px 6px;color:#9aa0a6;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em}
 
-/* ═══════════════════════════════════════════════════════════════════════════
-   v7 — Cadence auth gate + cloud sync (additions only; nothing above changed)
-   ═══════════════════════════════════════════════════════════════════════════ */
-
-/* ── Brand logo (falls back to .brand-mark C if missing) ────────────────── */
-.brand-logo{width:34px;height:34px;object-fit:contain;border-radius:9px;display:block}
-
-/* ── Auth gate ──────────────────────────────────────────────────────────── */
-.auth-gate{
-  min-height:100vh;
-  min-height:100dvh;
-  display:flex;
-  flex-direction:column;
-  align-items:center;
-  justify-content:center;
-  gap:22px;
-  padding:24px 16px max(24px,env(safe-area-inset-bottom));
-  background:
-    radial-gradient(60% 45% at 50% 0%,rgba(26,115,232,.08),transparent 60%),
-    #fff;
-}
-.auth-card{
-  width:100%;
-  max-width:400px;
-  background:#fff;
-  border:1px solid var(--line);
-  border-radius:14px;
-  box-shadow:var(--shadow);
-  padding:28px 24px 24px;
-}
-.auth-title{
-  font-size:22px;
-  font-weight:700;
-  letter-spacing:-.02em;
-  margin:0 0 6px;
-}
-.auth-sub{
-  font-size:13px;
-  color:var(--muted);
-  line-height:1.55;
-  margin:0 0 22px;
-}
-.auth-label{
-  display:block;
-  font-size:11px;
-  font-weight:700;
-  color:#5f6368;
-  text-transform:uppercase;
-  letter-spacing:.08em;
-  margin:14px 2px 6px;
-}
-.auth-card .search{
-  width:100%;
-  min-width:0;
-  display:block;
-  min-height:46px;
-  padding:12px 14px;
-  font-size:15px;
-}
-.auth-msg{
-  min-height:18px;
-  font-size:12.5px;
-  color:var(--danger);
-  margin:10px 2px 4px;
-}
-.auth-submit{
-  width:100%;
-  min-height:46px;
-  font-size:14.5px;
-  margin-top:10px;
-}
-.auth-loading{
-  display:flex;
-  flex-direction:column;
-  align-items:center;
-  justify-content:center;
-  gap:14px;
-  padding:36px 0 24px;
-  text-align:center;
-}
-.auth-loading-text{
-  font-size:12px;
-  color:var(--muted);
-  letter-spacing:.06em;
-  text-transform:uppercase;
-}
-.auth-spinner{
-  width:26px;
-  height:26px;
-  border-radius:50%;
-  border:2px solid var(--line);
-  border-top-color:var(--accent);
-  animation:authSpin .85s linear infinite;
-}
-@keyframes authSpin{to{transform:rotate(360deg)}}
-.auth-error{
-  text-align:center;
-  padding:18px 0 10px;
-}
-.auth-error b{
-  display:block;
-  font-size:15px;
-  color:var(--text);
-  margin-bottom:6px;
-}
-.auth-error p{
-  font-size:13px;
-  color:var(--muted);
-  margin:0 0 16px;
-}
-.auth-error .primary{
-  width:100%;
-  min-height:46px;
-}
-.auth-foot{
-  font-size:11px;
-  color:var(--muted);
-  letter-spacing:.06em;
-  text-transform:uppercase;
-  text-align:center;
-}
-@media(max-width:420px){
-  .auth-card{padding:24px 20px 20px}
-  .auth-title{font-size:20px}
-}
-
-/* ── Sync pill in header ────────────────────────────────────────────────── */
+/* ══════════════════════════════════════════════════════════════
+   v7 Cloud sync pill (added for D1 backend)
+   ══════════════════════════════════════════════════════════════ */
 .sync-pill{
-  display:inline-flex;
-  align-items:center;
-  gap:8px;
-  min-height:38px;
-  padding:0 12px;
-  border-radius:99px;
-  border:1px solid var(--line2);
-  background:#fff;
-  color:#5f6368;
-  font-size:11.5px;
-  font-weight:600;
-  letter-spacing:.03em;
-  transition:border-color .15s,color .15s,background .15s;
-  white-space:nowrap;
-  max-width:200px;
+  display:inline-flex;align-items:center;gap:7px;
+  font-size:11px;color:#5f6368;border:1px solid var(--line);
+  padding:6px 11px;border-radius:99px;background:#fff;
+  transition:.15s;white-space:nowrap;font-weight:600;
 }
-.sync-pill:hover{
-  border-color:#c4c9cf;
-  background:#f8f9fa;
+.sync-pill i{
+  display:inline-block;width:7px;height:7px;border-radius:50%;
+  background:#9aa0a6;transition:.15s;flex-shrink:0;
 }
-.sync-pill .sync-dot{
-  width:8px;
-  height:8px;
-  border-radius:50%;
-  background:#9aa0a6;
-  box-shadow:0 0 0 3px rgba(154,160,166,.15);
-  flex:0 0 auto;
-}
-.sync-pill .sync-label{
-  overflow:hidden;
-  text-overflow:ellipsis;
-}
-/* default state (no cloud save yet) */
-.sync-pill:not(.dirty):not(.synced):not(.saving) .sync-dot{
-  background:#9aa0a6;
-  box-shadow:0 0 0 3px rgba(154,160,166,.15);
-}
-/* dirty / unsynced */
-.sync-pill.dirty{
-  border-color:#e2c8a3;
-  color:#8a5b00;
-  background:#fdf8ee;
-}
-.sync-pill.dirty .sync-dot{
-  background:#f0a324;
-  box-shadow:0 0 0 3px rgba(240,163,36,.18);
-}
-/* saving */
-.sync-pill.saving{
-  border-color:#aecbfa;
-  color:#174ea6;
-  background:#f3f8ff;
-}
-.sync-pill.saving .sync-dot{
-  background:var(--accent);
-  box-shadow:0 0 0 3px rgba(26,115,232,.18);
-  animation:syncPulse .9s ease-in-out infinite;
-}
-/* synced */
-.sync-pill.synced{
-  border-color:#b7dfc2;
-  color:var(--green);
-  background:#f4fbf6;
-}
-.sync-pill.synced .sync-dot{
-  background:var(--green);
-  box-shadow:0 0 0 3px rgba(24,128,56,.15);
-}
-@keyframes syncPulse{
-  0%,100%{opacity:1;transform:scale(1)}
-  50%{opacity:.55;transform:scale(.85)}
-}
-@media(max-width:560px){
-  .sync-pill{padding:0 10px;font-size:11px;max-width:150px}
-  .sync-pill .sync-label{max-width:96px}
-}
+.sync-pill[data-status="synced"] i{background:#34a853}
+.sync-pill[data-status="syncing"] i{background:#f59e0b;animation:syncPulse 1s ease-in-out infinite}
+.sync-pill[data-status="error"] i{background:#d93025}
+.sync-pill[data-status="error"]{color:#d93025;border-color:#f2c7c5;background:#fef2f2}
+.sync-pill[data-status="syncing"]{color:#b06000;border-color:#fde2b8;background:#fffbf3}
+@keyframes syncPulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.45;transform:scale(.85)}}
 
-/* ── Logo image sizing (sidebar + mobile header) ──────────────────────────── */
-.brand-mark{background:#fff;overflow:hidden;border:1px solid var(--line)}
-.brand-mark img{width:100%;height:100%;object-fit:contain;padding:4px}
-.mobile-brand{align-items:center;gap:7px}
-.mobile-brand img{width:28px;height:28px;object-fit:contain}
+@media(max-width:560px){
+  .sync-pill{padding:6px 9px}
+  .sync-pill span#syncLabel{display:none}
+  .sync-pill i{width:8px;height:8px}
+}
