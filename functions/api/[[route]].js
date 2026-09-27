@@ -234,12 +234,23 @@ async function statePut(request, env, cors) {
 }
 
 // ── auth: token verification ─────────────────────────────────────────────────
+// Accepts the token from either the Authorization header (normal fetch calls)
+// or the ?token= query string (navigator.sendBeacon, which cannot set headers).
 async function requireAuth(request, env) {
+  let token = null;
+
   const header = request.headers.get("Authorization") || "";
   const m = header.match(/^Bearer\s+(.+)$/i);
-  if (!m) return { ok: false };
+  if (m) {
+    token = m[1];
+  } else {
+    const url = new URL(request.url);
+    token = url.searchParams.get("token");
+  }
 
-  const payload = await verifyToken(m[1], env.JWT_SECRET);
+  if (!token) return { ok: false };
+
+  const payload = await verifyToken(token, env.JWT_SECRET);
   if (!payload) return { ok: false };
 
   const row = await env.DB.prepare(
