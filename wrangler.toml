@@ -1,0 +1,18 @@
+# Cadence — Cloudflare configuration
+# Deploy with:  wrangler pages deploy .
+#
+# JWT_SECRET is NOT set here. Set it once with:
+#     wrangler pages secret put JWT_SECRET
+# (Use a long random string, e.g. from: openssl rand -base64 48)
+
+name = "cadence"
+compatibility_date = "2024-11-01"
+pages_build_output_dir = "."
+
+# ── D1 binding ────────────────────────────────────────────────────────────────
+# Backend reads this as env.DB (see functions/api/[[route]].js).
+# Tables are created automatically on first API call via ensureTables().
+[[d1_databases]]
+binding = "DB"
+database_name = "home-db"
+database_id = "b99bb74d-4ea8-4e6c-8409-83aabefbc2ed"
