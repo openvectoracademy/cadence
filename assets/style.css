@@ -149,9 +149,86 @@ button{touch-action:manipulation;-webkit-tap-highlight-color:transparent}
   flex-shrink:0;
 }
 
+/* ══════════════════════════════════════════════════════════════
+   v9 Per-exam live countdown cards
+   ══════════════════════════════════════════════════════════════ */
+.exam-cards{
+  display:grid;
+  gap:12px;
+  max-width:900px;
+}
+.exam-card{
+  padding:16px 18px;
+  transition:.15s;
+}
+.exam-card.past{
+  opacity:.72;
+}
+.exam-card-top{
+  display:flex;
+  justify-content:space-between;
+  align-items:flex-start;
+  gap:16px;
+}
+.exam-card-name{
+  font-size:15px;
+  font-weight:700;
+  letter-spacing:-.01em;
+}
+.exam-countdown{
+  display:grid;
+  grid-template-columns:repeat(4,1fr);
+  gap:8px;
+  margin-top:16px;
+  padding-top:16px;
+  border-top:1px solid var(--line);
+}
+.exam-countdown>div{
+  text-align:center;
+  padding:11px 6px;
+  background:#fbfcfe;
+  border:1px solid var(--line);
+  border-radius:9px;
+}
+.exam-countdown b{
+  display:block;
+  font-family:"DM Mono",monospace;
+  font-size:24px;
+  font-weight:500;
+  line-height:1.1;
+  letter-spacing:-.02em;
+}
+.exam-countdown span{
+  display:block;
+  margin-top:4px;
+  font-size:9px;
+  color:var(--muted);
+  text-transform:uppercase;
+  letter-spacing:.07em;
+}
+.exam-past-badge{
+  margin-top:14px;
+  padding:8px 12px;
+  background:var(--green-soft);
+  color:var(--green);
+  border-radius:8px;
+  font-size:11px;
+  font-weight:700;
+  text-align:center;
+}
+
 @media(max-width:560px){
   .sync-pill{padding:6px 9px}
   .sync-pill span#syncLabel{display:none}
   .sync-pill i{width:8px;height:8px}
   .brand-logo{height:36px;border-radius:8px}
+  .exam-countdown{
+    grid-template-columns:repeat(4,1fr);
+    gap:6px;
+  }
+  .exam-countdown>div{padding:9px 3px}
+  .exam-countdown b{font-size:19px}
+  .exam-countdown span{font-size:8px;letter-spacing:.05em}
+  .exam-card-top{flex-direction:column;align-items:stretch}
+  .exam-card-top .secondary{width:100%;margin-top:8px}
 }
