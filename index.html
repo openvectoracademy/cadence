@@ -3,33 +3,18 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="theme-color" content="#ffffff">
+<meta name="theme-color" content="#07101d">
 <title>Cadence — Admission Progress</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Manrope:wght@400;500;600;700;800&family=Noto+Sans+Bengali:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="assets/style.css">
 </head>
 <body>
-
-<!-- ── Auth gate ─────────────────────────────────────────────────────────────
-     Shown before login / first-run setup. Hidden once authenticated.
-     app.js decides which state to render here (setup / login / spinner).
-     The #app block below stays hidden until auth passes. -->
-<div id="authGate" class="auth-gate">
-  <div class="auth-card" id="authCard">
-    <div class="auth-loading">
-      <div class="auth-spinner"></div>
-      <div class="auth-loading-text">Checking…</div>
-    </div>
-  </div>
-  <div class="auth-foot">Cadence · personal use</div>
-</div>
-
-<div id="app" hidden>
+<div id="app">
   <aside class="sidebar" id="sidebar">
     <div class="brand-row">
       <div class="brand">
-        <div class="brand-mark"><img src="public/logo/cadence.png" alt="Cadence" onerror="this.parentElement.textContent='C';this.parentElement.style.display='grid';this.parentElement.style.placeItems='center';this.parentElement.style.fontWeight='700';this.parentElement.style.color='#fff';this.parentElement.style.background='var(--accent)';"></div>
+        <div class="brand-mark">C</div>
         <div><b>CADENCE</b><span>ADMISSION TRACKER</span></div>
       </div>
       <button class="sidebar-close" id="sidebarClose" aria-label="Close menu">×</button>
@@ -40,8 +25,8 @@
       <button class="nav" data-page="finals">Final Reviews</button>
       <button class="nav" data-page="mock">Full Mock</button>
       <button class="nav" data-page="exams">Exam Dates</button>
-      <div class="nav-section-label">Progress & Time</div>
-      <button class="nav" data-page="progress">Study Streak & Time</button>
+      <div class="nav-section-label">Progress &amp; Time</div>
+      <button class="nav" data-page="progress">Study Streak &amp; Time</button>
       <button class="nav" data-page="settings">Settings</button>
     </nav>
   </aside>
@@ -49,22 +34,20 @@
   <main class="main">
     <header>
       <button class="icon-btn menu" id="menuBtn" aria-label="Menu">☰</button>
-      <div class="mobile-brand"><img src="public/logo/cadence.png" alt="Cadence" onerror="this.remove()"> <span>CADENCE</span></div>
+      <div class="mobile-brand">CADENCE</div>
       <div class="header-right">
-        <button class="sync-pill" id="syncPill" type="button" title="Sync status — tap to save to cloud">
-          <span class="sync-dot"></span>
-          <span class="sync-label">Not synced</span>
-        </button>
-        <button class="icon-btn" id="signOutBtn" title="Sign out" aria-label="Sign out">⎋</button>
+        <span class="sync-pill" id="syncPill" title="Cloud sync status">
+          <i></i><span id="syncLabel">Synced</span>
+        </span>
+        <button class="icon-btn" id="themeBtn" title="Theme">◐</button>
       </div>
     </header>
     <section id="content"></section>
   </main>
 </div>
-
 <footer class="site-footer"><b>Cadence</b><span>Study consistently. Improve daily.</span><span>© 2026</span></footer>
 <div class="toast" id="toast"></div>
-<div class="modal" id="modal"><div class="modal-card"><div id="modalBody"></div></div></div>
+<script>if(!localStorage.getItem('site_token'))location.replace('/login.html');</script>
 <script src="assets/data.js"></script>
 <script src="assets/app.js"></script>
 </body>
