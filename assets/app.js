@@ -282,27 +282,21 @@ function refreshLive() {
   const n = nowParts();
   document.querySelectorAll("[data-live-date]").forEach(x => x.textContent = n.date);
   document.querySelectorAll("[data-live-time]").forEach(x => x.textContent = n.time);
-  const ex = nextExam();
-  const box = document.getElementById("nextCountdown");
-  if (box) {
-    if (!ex) {
-      box.innerHTML = '<div class="muted">No upcoming exam scheduled.</div>';
-    } else {
-      const [d, h, m, s] = countdownParts(examDateValue(ex) - Date.now());
-      const nameEl = box.querySelector("[data-exam-name]");
-      const dateEl = box.querySelector("[data-exam-date]");
-      const dEl = box.querySelector("[data-cd-days]");
-      const hEl = box.querySelector("[data-cd-hours]");
-      const mEl = box.querySelector("[data-cd-mins]");
-      const sEl = box.querySelector("[data-cd-secs]");
-      if (nameEl) nameEl.textContent = ex.name;
-      if (dateEl) dateEl.textContent = formatDateShort(ex.date);
-      if (dEl) dEl.textContent = d;
-      if (hEl) hEl.textContent = h;
-      if (mEl) mEl.textContent = m;
-      if (sEl) sEl.textContent = s;
-    }
-  }
+
+  document.querySelectorAll(".exam-card[data-exam-ts]").forEach(card => {
+    const ts = Number(card.dataset.examTs);
+    if (!Number.isFinite(ts)) return;
+    const diff = ts - Date.now();
+    const [d, h, m, s] = countdownParts(diff);
+    const dEl = card.querySelector("[data-cd-days]");
+    const hEl = card.querySelector("[data-cd-hours]");
+    const mEl = card.querySelector("[data-cd-mins]");
+    const sEl = card.querySelector("[data-cd-secs]");
+    if (dEl) dEl.textContent = d;
+    if (hEl) hEl.textContent = h;
+    if (mEl) mEl.textContent = m;
+    if (sEl) sEl.textContent = s;
+  });
 }
 function startLive() {
   clearInterval(clockTimer);
@@ -341,19 +335,31 @@ function progressTimeView() {
 }
 
 function examsView() {
-  const list = [...state.exams].sort((a, b) => examDateValue(a) - examDateValue(b));
-  return `${pageHero("Schedule", "Upcoming Exams", "Set your own exam dates and keep a live countdown.", { target: "dashboard", label: "Dashboard" })}
-  <div class="card" style="margin-bottom:18px;display:grid;grid-template-columns:1fr 1fr;gap:20px;align-items:center">
+  const now = Date.now();
+  const sorted = [...state.exams].sort((a, b) => {
+    const av = examDateValue(a), bv = examDateValue(b);
+    const aPast = !Number.isFinite(av) || av <= now;
+    const bPast = !Number.isFinite(bv) || bv <= now;
+    if (aPast !== bPast) return aPast ? 1 : -1;
+    return av - bv;
+  });
+  const upcoming = sorted.filter(e => Number.isFinite(examDateValue(e)) && examDateValue(e) > now);
+  const past = sorted.filter(e => !Number.isFinite(examDateValue(e)) || examDateValue(e) <= now);
+
+  return `${pageHero("Schedule", "Upcoming Exams", "Every scheduled exam with its own live countdown. Soonest first.", { target: "dashboard", label: "Dashboard" })}
+  <div class="card" style="margin-bottom:18px;display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap">
     <div>
       <div class="eyebrow">Current time</div>
       <div class="live-date" data-live-date></div>
       <div class="live-time" data-live-time></div>
     </div>
-    <div>
-      <div class="eyebrow">Next exam countdown</div>
-      <div id="nextCountdown" style="margin-top:6px">${countdownInner()}</div>
+    <div style="text-align:right">
+      <div class="eyebrow">Active exams</div>
+      <div style="font-family:'DM Mono',monospace;font-size:24px;font-weight:500;margin-top:6px">${upcoming.length}</div>
+      <div class="muted">countdown${upcoming.length === 1 ? '' : 's'} running</div>
     </div>
   </div>
+
   <div class="card exam-form">
     <h2>Add an exam</h2>
     <div class="exam-form-grid">
@@ -362,41 +368,56 @@ function examsView() {
       <button class="primary" onclick="addExam(document.getElementById('examName').value,document.getElementById('examDate').value)">Add exam</button>
     </div>
   </div>
-  <div class="section-title"><h2>Scheduled exams</h2><span class="muted">Edit your dates anytime</span></div>
-  <div class="exam-schedule">
-    ${list.length
-      ? list.map(e => `<div class="card schedule-row"><div><b>${esc(e.name)}</b><div class="muted">${formatDateShort(e.date)}</div></div><button class="secondary danger" onclick="removeExam('${e.id}')">Remove</button></div>`).join("")
-      : '<div class="empty">No exams scheduled yet.</div>'}
-  </div>`;
+
+  <div class="section-title"><h2>Upcoming</h2><span class="muted">${upcoming.length} exam${upcoming.length === 1 ? '' : 's'}</span></div>
+  <div class="exam-cards">
+    ${upcoming.length
+      ? upcoming.map(e => examCardHtml(e, false)).join("")
+      : '<div class="empty">No upcoming exams. Add one above to start the countdown.</div>'}
+  </div>
+
+  ${past.length ? `
+    <div class="section-title"><h2>Past</h2><span class="muted">${past.length} exam${past.length === 1 ? '' : 's'} completed</span></div>
+    <div class="exam-cards past">
+      ${past.map(e => examCardHtml(e, true)).join("")}
+    </div>
+  ` : ""}
+  `;
 }
 
-function countdownInner() {
-  const ex = nextExam();
-  if (!ex) {
-    return `<div class="muted">No upcoming exam scheduled.</div>`;
-  }
-  const [d, h, m, s] = countdownParts(examDateValue(ex) - Date.now());
-  return `<div style="font-size:13px;font-weight:600;margin-bottom:4px" data-exam-name>${esc(ex.name)}</div>
-  <div class="muted" style="margin-bottom:8px;font-size:11px" data-exam-date>${formatDateShort(ex.date)}</div>
-  <div style="display:flex;gap:10px">
-    <div style="text-align:center"><b style="display:block;font-family:'DM Mono',monospace;font-size:19px" data-cd-days>${d}</b><span style="font-size:9px;color:var(--muted);text-transform:uppercase">Days</span></div>
-    <div style="text-align:center"><b style="display:block;font-family:'DM Mono',monospace;font-size:19px" data-cd-hours>${h}</b><span style="font-size:9px;color:var(--muted);text-transform:uppercase">Hrs</span></div>
-    <div style="text-align:center"><b style="display:block;font-family:'DM Mono',monospace;font-size:19px" data-cd-mins>${m}</b><span style="font-size:9px;color:var(--muted);text-transform:uppercase">Min</span></div>
-    <div style="text-align:center"><b style="display:block;font-family:'DM Mono',monospace;font-size:19px" data-cd-secs>${s}</b><span style="font-size:9px;color:var(--muted);text-transform:uppercase">Sec</span></div>
-  </div>`;
-}
+function examCardHtml(exam, isPast) {
+  const ts = examDateValue(exam);
+  const id = esc(exam.id);
+  const name = esc(exam.name);
+  const when = formatDateShort(exam.date);
 
-function countdownCard() {
-  const ex = nextExam();
-  if (!ex) {
-    return `<div class="countdown-top"><div><div class="eyebrow">Next exam</div><h2>No upcoming exam</h2><div class="muted">Set your next exam date to start a live countdown.</div></div><button class="primary" onclick="go('exams')">Set an exam</button></div>`;
+  if (isPast || !Number.isFinite(ts) || ts <= Date.now()) {
+    return `<div class="card exam-card past" data-exam-id="${id}">
+      <div class="exam-card-top">
+        <div>
+          <div class="exam-card-name">${name}</div>
+          <div class="muted" style="margin-top:5px">${when}</div>
+        </div>
+        <button class="secondary danger" onclick="removeExam('${id}')">Remove</button>
+      </div>
+      <div class="exam-past-badge">Completed</div>
+    </div>`;
   }
-  return `<div class="countdown-top"><div><div class="eyebrow">Next exam</div><h2 data-exam-name>${esc(ex.name)}</h2><div class="muted" data-exam-date>${formatDateShort(ex.date)}</div></div><button class="secondary" onclick="go('exams')">Manage exams</button></div>
-  <div class="countdown-grid">
-    <div><b data-cd-days>0</b><span>Days</span></div>
-    <div><b data-cd-hours>0</b><span>Hours</span></div>
-    <div><b data-cd-mins>0</b><span>Minutes</span></div>
-    <div><b data-cd-secs>0</b><span>Seconds</span></div>
+
+  return `<div class="card exam-card" data-exam-id="${id}" data-exam-ts="${ts}">
+    <div class="exam-card-top">
+      <div>
+        <div class="exam-card-name">${name}</div>
+        <div class="muted" style="margin-top:5px">${when}</div>
+      </div>
+      <button class="secondary danger" onclick="removeExam('${id}')">Remove</button>
+    </div>
+    <div class="exam-countdown" data-cd-wrap>
+      <div><b data-cd-days>–</b><span>Days</span></div>
+      <div><b data-cd-hours>–</b><span>Hours</span></div>
+      <div><b data-cd-mins>–</b><span>Minutes</span></div>
+      <div><b data-cd-secs>–</b><span>Seconds</span></div>
+    </div>
   </div>`;
 }
 
@@ -412,7 +433,6 @@ function dashboard() {
   }
   const dailyToday = Number(state.daily.byDate[today()] || 0);
   return `${pageHero("Admission command center", "Dashboard", "Track chapters, daily exams and every final/mock attempt.", null)}
-  <div class="countdown card" id="nextCountdown" style="margin-bottom:22px">${countdownCard()}</div>
   <div class="grid stats">
     ${stat("Completion", t.percent + "%", "of chapters", t.percent)}
     ${stat("Chapters", t.complete + " / " + t.all.length, "completed")}
