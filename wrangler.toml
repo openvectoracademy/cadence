@@ -1,15 +1,7 @@
-# Cadence — Cloudflare configuration
-#
-# JWT_SECRET is set as a dashboard secret (Settings → Variables and secrets),
-# not here — that's already done for this project.
-
 name = "cadence"
-compatibility_date = "2024-11-01"
+compatibility_date = "2024-01-01"
 pages_build_output_dir = "."
 
-# ── D1 binding ────────────────────────────────────────────────────────────────
-# Backend reads this as env.DB (see functions/api/[[route]].js).
-# Tables (account, app_state) are created automatically on first API call.
 [[d1_databases]]
 binding = "DB"
 database_name = "home-db"
