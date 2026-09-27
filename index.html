@@ -14,7 +14,8 @@
   <aside class="sidebar" id="sidebar">
     <div class="brand-row">
       <div class="brand">
-        <div class="brand-mark">C</div>
+        <img src="/images/home.png" height="34" alt="Cadence" class="brand-logo"
+             onerror="this.replaceWith(Object.assign(document.createElement('div'),{className:'brand-mark',textContent:'C'}))">
         <div><b>CADENCE</b><span>ADMISSION TRACKER</span></div>
       </div>
       <button class="sidebar-close" id="sidebarClose" aria-label="Close menu">×</button>
@@ -34,10 +35,15 @@
   <main class="main">
     <header>
       <button class="icon-btn menu" id="menuBtn" aria-label="Menu">☰</button>
-      <div class="mobile-brand">CADENCE</div>
+      <div class="mobile-brand">
+        <img src="/images/home.png" height="26" alt="Cadence"
+             onerror="this.style.display='none';this.nextElementSibling.style.display='inline'"
+             style="vertical-align:middle;border-radius:6px">
+        <span style="display:none">CADENCE</span>
+      </div>
       <div class="header-right">
-        <span class="sync-pill" id="syncPill" title="Cloud sync status">
-          <i></i><span id="syncLabel">Synced</span>
+        <span class="sync-pill" id="syncPill" data-status="idle" title="Cloud sync status">
+          <i></i><span id="syncLabel">Ready</span>
         </span>
         <button class="icon-btn" id="themeBtn" title="Theme">◐</button>
       </div>
@@ -50,5 +56,4 @@
 <script>if(!localStorage.getItem('site_token'))location.replace('/login.html');</script>
 <script src="assets/data.js"></script>
 <script src="assets/app.js"></script>
-</body>
-</html>
+</body></html>
