@@ -39,8 +39,15 @@ async function pushRemote() {
       body: JSON.stringify({ state })
     });
     if (res.status === 401) { pushInFlight = false; return authFail(); }
-    setSyncStatus(res.ok ? 'synced' : 'error');
+    if (res.ok) {
+      localStorage.removeItem('cadence_dirty');
+      setSyncStatus('synced');
+    } else {
+      localStorage.setItem('cadence_dirty', '1');
+      setSyncStatus('error');
+    }
   } catch (e) {
+    localStorage.setItem('cadence_dirty', '1');
     setSyncStatus('error');
   }
   pushInFlight = false;
@@ -278,15 +285,22 @@ function refreshLive() {
   const ex = nextExam();
   const box = document.getElementById("nextCountdown");
   if (box) {
-    if (!ex) box.innerHTML = '<div class="muted">No upcoming exam scheduled.</div>';
-    else {
+    if (!ex) {
+      box.innerHTML = '<div class="muted">No upcoming exam scheduled.</div>';
+    } else {
       const [d, h, m, s] = countdownParts(examDateValue(ex) - Date.now());
-      box.querySelector("[data-exam-name]").textContent = ex.name;
-      box.querySelector("[data-exam-date]").textContent = formatDateShort(ex.date);
-      box.querySelector("[data-cd-days]").textContent = d;
-      box.querySelector("[data-cd-hours]").textContent = h;
-      box.querySelector("[data-cd-mins]").textContent = m;
-      box.querySelector("[data-cd-secs]").textContent = s;
+      const nameEl = box.querySelector("[data-exam-name]");
+      const dateEl = box.querySelector("[data-exam-date]");
+      const dEl = box.querySelector("[data-cd-days]");
+      const hEl = box.querySelector("[data-cd-hours]");
+      const mEl = box.querySelector("[data-cd-mins]");
+      const sEl = box.querySelector("[data-cd-secs]");
+      if (nameEl) nameEl.textContent = ex.name;
+      if (dateEl) dateEl.textContent = formatDateShort(ex.date);
+      if (dEl) dEl.textContent = d;
+      if (hEl) hEl.textContent = h;
+      if (mEl) mEl.textContent = m;
+      if (sEl) sEl.textContent = s;
     }
   }
 }
@@ -329,6 +343,17 @@ function progressTimeView() {
 function examsView() {
   const list = [...state.exams].sort((a, b) => examDateValue(a) - examDateValue(b));
   return `${pageHero("Schedule", "Upcoming Exams", "Set your own exam dates and keep a live countdown.", { target: "dashboard", label: "Dashboard" })}
+  <div class="card" style="margin-bottom:18px;display:grid;grid-template-columns:1fr 1fr;gap:20px;align-items:center">
+    <div>
+      <div class="eyebrow">Current time</div>
+      <div class="live-date" data-live-date></div>
+      <div class="live-time" data-live-time></div>
+    </div>
+    <div>
+      <div class="eyebrow">Next exam countdown</div>
+      <div id="nextCountdown" style="margin-top:6px">${countdownInner()}</div>
+    </div>
+  </div>
   <div class="card exam-form">
     <h2>Add an exam</h2>
     <div class="exam-form-grid">
@@ -342,6 +367,22 @@ function examsView() {
     ${list.length
       ? list.map(e => `<div class="card schedule-row"><div><b>${esc(e.name)}</b><div class="muted">${formatDateShort(e.date)}</div></div><button class="secondary danger" onclick="removeExam('${e.id}')">Remove</button></div>`).join("")
       : '<div class="empty">No exams scheduled yet.</div>'}
+  </div>`;
+}
+
+function countdownInner() {
+  const ex = nextExam();
+  if (!ex) {
+    return `<div class="muted">No upcoming exam scheduled.</div>`;
+  }
+  const [d, h, m, s] = countdownParts(examDateValue(ex) - Date.now());
+  return `<div style="font-size:13px;font-weight:600;margin-bottom:4px" data-exam-name>${esc(ex.name)}</div>
+  <div class="muted" style="margin-bottom:8px;font-size:11px" data-exam-date>${formatDateShort(ex.date)}</div>
+  <div style="display:flex;gap:10px">
+    <div style="text-align:center"><b style="display:block;font-family:'DM Mono',monospace;font-size:19px" data-cd-days>${d}</b><span style="font-size:9px;color:var(--muted);text-transform:uppercase">Days</span></div>
+    <div style="text-align:center"><b style="display:block;font-family:'DM Mono',monospace;font-size:19px" data-cd-hours>${h}</b><span style="font-size:9px;color:var(--muted);text-transform:uppercase">Hrs</span></div>
+    <div style="text-align:center"><b style="display:block;font-family:'DM Mono',monospace;font-size:19px" data-cd-mins>${m}</b><span style="font-size:9px;color:var(--muted);text-transform:uppercase">Min</span></div>
+    <div style="text-align:center"><b style="display:block;font-family:'DM Mono',monospace;font-size:19px" data-cd-secs>${s}</b><span style="font-size:9px;color:var(--muted);text-transform:uppercase">Sec</span></div>
   </div>`;
 }
 
@@ -371,6 +412,7 @@ function dashboard() {
   }
   const dailyToday = Number(state.daily.byDate[today()] || 0);
   return `${pageHero("Admission command center", "Dashboard", "Track chapters, daily exams and every final/mock attempt.", null)}
+  <div class="countdown card" id="nextCountdown" style="margin-bottom:22px">${countdownCard()}</div>
   <div class="grid stats">
     ${stat("Completion", t.percent + "%", "of chapters", t.percent)}
     ${stat("Chapters", t.complete + " / " + t.all.length, "completed")}
@@ -639,7 +681,7 @@ function render() {
     : settingsView();
   document.getElementById("content").innerHTML = h;
   if (page === "chapters") { updatePaperFilter(); renderChapters(); }
-  if (page === "dashboard" || page === "progress") startLive();
+  if (page === "dashboard" || page === "progress" || page === "exams") startLive();
 }
 
 function exportData() {
@@ -734,37 +776,44 @@ window.signOut = signOut;
 window.enc = enc;
 
 // ══════════════════════════════════════════════════════════════
-// BOOTSTRAP SYNC — runs after UI is rendered
+// BOOTSTRAP SYNC
 // ══════════════════════════════════════════════════════════════
 (async function bootstrapSync() {
   const migrateFlag = localStorage.getItem('cadence_migrate_local') === '1';
-  if (migrateFlag) {
+  const dirtyFlag = localStorage.getItem('cadence_dirty') === '1';
+
+  if (migrateFlag || dirtyFlag) {
     localStorage.removeItem('cadence_migrate_local');
+    localStorage.removeItem('cadence_dirty');
     await pushRemote();
     setSyncStatus('synced');
     return;
   }
+
   setSyncStatus('syncing');
   const remote = await pullRemote();
+
   if (remote && remote.state && remote.updated_at) {
     state = merge(clone(DEFAULT), remote.state);
     localStorage.setItem(KEY, JSON.stringify(state));
     render();
     setSyncStatus('synced');
   } else if (remote && remote.state === null) {
-    // Server has no data yet — push current local state
-    await pushRemote();
+    const hasLocal = Object.keys(state.progress || {}).length > 0
+                  || Number(state.mock || 0) > 0
+                  || (state.exams || []).length > 0;
+    if (hasLocal) await pushRemote();
     setSyncStatus('synced');
+    if (!hasLocal) toast('No cloud data yet. Start tracking to sync.');
   } else {
     setSyncStatus('error');
   }
 })();
 
-// Flush pending push if user closes tab
 window.addEventListener('beforeunload', () => {
   if (pushTimer && TOKEN) {
     navigator.sendBeacon?.(
-      '/api/state',
+      '/api/state?token=' + encodeURIComponent(TOKEN),
       new Blob([JSON.stringify({ state })], { type: 'application/json' })
     );
   }
