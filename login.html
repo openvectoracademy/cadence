@@ -1,0 +1,241 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#ffffff">
+<title>Cadence — Sign in</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#fff;--panel:#fff;--line:#e5e7eb;--line2:#d7dce2;
+    --text:#202124;--muted:#6b7280;--accent:#1a73e8;--accent-soft:#e8f0fe;
+    --danger:#d93025;--green:#188038;--green-soft:#e6f4ea;
+    --shadow:0 1px 2px rgba(60,64,67,.08),0 2px 8px rgba(60,64,67,.08);
+    --r:12px;
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%}
+  body{
+    margin:0;background:#f8fafc;color:var(--text);
+    font-family:"Manrope",Arial,sans-serif;-webkit-font-smoothing:antialiased;
+    display:grid;place-items:center;padding:24px;
+    padding-top:max(24px,env(safe-area-inset-top));
+    padding-bottom:max(24px,env(safe-area-inset-bottom));
+  }
+  .card{
+    width:100%;max-width:420px;background:#fff;border:1px solid var(--line);
+    border-radius:16px;padding:32px;box-shadow:var(--shadow);
+  }
+  .brand{display:flex;gap:11px;align-items:center;margin-bottom:26px}
+  .brand-mark{
+    width:38px;height:38px;border-radius:10px;background:var(--accent);
+    color:#fff;display:grid;place-items:center;font-weight:800;font-size:16px;
+  }
+  .brand b{display:block;letter-spacing:.09em;font-size:14px;font-weight:800}
+  .brand span{display:block;color:var(--muted);font-size:9px;letter-spacing:.06em;margin-top:3px}
+  h1{font-size:22px;letter-spacing:-.02em;margin:0 0 6px;font-weight:800}
+  .sub{color:var(--muted);font-size:13px;margin:0 0 22px;line-height:1.5}
+  label{display:block;font-size:12px;font-weight:600;color:#3c4043;margin-bottom:7px}
+  input{
+    width:100%;padding:12px 13px;border:1px solid var(--line2);border-radius:9px;
+    background:#fff;font-size:14px;font-family:inherit;outline:0;transition:.15s;
+    min-height:44px;
+  }
+  input:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+  .field{margin-bottom:14px}
+  button{
+    width:100%;padding:12px;border:0;border-radius:9px;background:var(--accent);
+    color:#fff;font-size:14px;font-weight:700;font-family:inherit;cursor:pointer;
+    transition:.15s;min-height:44px;
+  }
+  button:hover{background:#1769d1}
+  button:disabled{opacity:.6;cursor:not-allowed}
+  .hint{font-size:11px;color:var(--muted);margin-top:6px}
+  .error{
+    background:#fef2f2;border:1px solid #fecaca;color:var(--danger);
+    padding:11px 13px;border-radius:9px;font-size:12.5px;margin-bottom:14px;display:none;
+  }
+  .error.show{display:block}
+  .footer-note{text-align:center;color:var(--muted);font-size:11px;margin-top:18px}
+  .spinner{
+    display:inline-block;width:14px;height:14px;border:2px solid rgba(255,255,255,.4);
+    border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite;
+    vertical-align:-2px;margin-right:7px;
+  }
+  @keyframes spin{to{transform:rotate(360deg)}}
+  .loading-state{
+    text-align:center;padding:20px 0;color:var(--muted);font-size:13px;
+  }
+  .loading-state .big-spinner{
+    display:inline-block;width:22px;height:22px;border:2.5px solid var(--line2);
+    border-top-color:var(--accent);border-radius:50%;animation:spin .7s linear infinite;
+    margin-bottom:12px;
+  }
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="brand">
+    <div class="brand-mark">C</div>
+    <div><b>CADENCE</b><span>ADMISSION TRACKER</span></div>
+  </div>
+
+  <div id="loadingView" class="loading-state">
+    <div class="big-spinner"></div>
+    <div>Connecting…</div>
+  </div>
+
+  <div id="authView" style="display:none">
+    <h1 id="title">Sign in</h1>
+    <p class="sub" id="subtitle">Welcome back. Enter your credentials to continue.</p>
+
+    <div class="error" id="errorBox"></div>
+
+    <form id="authForm" autocomplete="on" novalidate>
+      <div class="field">
+        <label for="username">Username</label>
+        <input id="username" name="username" type="text" autocomplete="username"
+               autocapitalize="off" autocorrect="off" spellcheck="false" required>
+        <div class="hint" id="usernameHint" style="display:none">3–32 chars: a–z, 0–9, underscore</div>
+      </div>
+      <div class="field">
+        <label for="password">Password</label>
+        <input id="password" name="password" type="password"
+               autocomplete="current-password" required>
+        <div class="hint" id="passwordHint" style="display:none">At least 4 characters</div>
+      </div>
+      <div class="field" id="confirmWrap" style="display:none">
+        <label for="confirm">Confirm password</label>
+        <input id="confirm" type="password" autocomplete="new-password">
+      </div>
+      <button type="submit" id="submitBtn">Sign in</button>
+    </form>
+
+    <div class="footer-note">Personal use · One account per deployment</div>
+  </div>
+</div>
+
+<script>
+(function () {
+  'use strict';
+  var $ = function (id) { return document.getElementById(id); };
+  var errorBox = $('errorBox');
+  var form = $('authForm');
+  var submitBtn = $('submitBtn');
+  var mode = 'login';
+
+  function showError(msg) {
+    errorBox.textContent = msg;
+    errorBox.classList.add('show');
+  }
+  function clearError() {
+    errorBox.textContent = '';
+    errorBox.classList.remove('show');
+  }
+  function setLoading(on) {
+    submitBtn.disabled = on;
+    if (mode === 'setup') {
+      submitBtn.innerHTML = on
+        ? '<span class="spinner"></span>Creating…'
+        : 'Create account';
+    } else {
+      submitBtn.innerHTML = on
+        ? '<span class="spinner"></span>Signing in…'
+        : 'Sign in';
+    }
+  }
+
+  function showAuthView() {
+    $('loadingView').style.display = 'none';
+    $('authView').style.display = '';
+  }
+
+  async function detectMode() {
+    try {
+      var res = await fetch('/api/auth/status', { cache: 'no-store' });
+      if (!res.ok) throw new Error('bad status');
+      var data = await res.json();
+
+      if (data.needs_setup) {
+        mode = 'setup';
+        $('title').textContent = 'Create your account';
+        $('subtitle').textContent =
+          'First-time setup. Choose a username and password — you\'ll use these every time you sign in.';
+        $('confirmWrap').style.display = '';
+        $('usernameHint').style.display = '';
+        $('passwordHint').style.display = '';
+        $('password').setAttribute('autocomplete', 'new-password');
+        submitBtn.textContent = 'Create account';
+      } else {
+        mode = 'login';
+      }
+      showAuthView();
+    } catch (e) {
+      showAuthView();
+      showError('Cannot reach server. Check your connection and try again.');
+    }
+  }
+
+  form.addEventListener('submit', async function (e) {
+    e.preventDefault();
+    clearError();
+
+    var username = $('username').value.trim().toLowerCase();
+    var password = $('password').value;
+
+    if (mode === 'setup') {
+      var confirm = $('confirm').value;
+      if (!/^[a-z0-9_]{3,32}$/.test(username)) {
+        return showError('Username must be 3–32 chars: a–z, 0–9, _');
+      }
+      if (password.length < 4) {
+        return showError('Password must be at least 4 characters');
+      }
+      if (password !== confirm) {
+        return showError('Passwords do not match');
+      }
+    } else {
+      if (!username || !password) {
+        return showError('Enter your username and password');
+      }
+    }
+
+    setLoading(true);
+    try {
+      var endpoint = mode === 'setup' ? '/api/auth/setup' : '/api/auth/login';
+      var res = await fetch(endpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username: username, password: password })
+      });
+      var data = await res.json();
+
+      if (!res.ok) {
+        setLoading(false);
+        return showError(data.error || 'Something went wrong');
+      }
+
+      localStorage.setItem('site_token', data.token);
+      localStorage.setItem(
+        'site_user',
+        JSON.stringify({ id: data.user_id, username: data.username })
+      );
+
+      if (mode === 'setup') {
+        localStorage.setItem('cadence_migrate_local', '1');
+      }
+
+      window.location.href = '/index.html';
+    } catch (err) {
+      setLoading(false);
+      showError('Network error. Please try again.');
+    }
+  });
+
+  detectMode();
+})();
+</script>
+</body>
+</html>
