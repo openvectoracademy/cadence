@@ -1,360 +1,275 @@
-/**
- * Cadence — backend API
- * Cloudflare Pages Functions, single catch-all route.
- *
- * Routes (all under /api):
- *   GET  /api/auth/status   → { exists: boolean }              (public)
- *   POST /api/auth/setup    → { token, username }              (public, only if no account)
- *   POST /api/auth/login    → { token, username }              (public)
- *   GET  /api/auth/me       → { username }                     (auth)
- *   GET  /api/state         → { data, version, updated_at }    (auth)
- *   PUT  /api/state         → { ok, updated_at, version }      (auth)
- *
- * Tables are created lazily on first request via ensureTables().
- * Single-user model: account has exactly one row; app_state has exactly one row.
- *
- * Design principle: the frontend is local-first. This API is only touched on
- * explicit save/restore and on the auto-beacon that fires when the tab closes
- * with unsynced changes. No per-tap writes.
- */
+// functions/api/[[route]].js
+// Cadence — single-user auth + state sync backend
+// Cloudflare Pages Functions + D1
+// Routes:
+//   GET  /api/auth/status   → { needs_setup }
+//   POST /api/auth/setup    → { token, username, user_id }
+//   POST /api/auth/login    → { token, username, user_id }
+//   GET  /api/state         → { state, updated_at }   (JWT)
+//   PUT  /api/state         → { ok, updated_at }      (JWT)
 
-const TOKEN_TTL_SECONDS = 60 * 60 * 24 * 365; // 1 year
-const enc = new TextEncoder();
-
-// ── entry ────────────────────────────────────────────────────────────────────
 export async function onRequest(context) {
   const { request, env } = context;
-  const url = new URL(request.url);
-  const path = url.pathname.replace(/\/+$/, "") || "/api";
-  const method = request.method.toUpperCase();
 
-  const cors = {
-    "Access-Control-Allow-Origin": "*",
-    "Access-Control-Allow-Methods": "GET, POST, PUT, OPTIONS",
-    "Access-Control-Allow-Headers": "Content-Type, Authorization",
-    "Access-Control-Max-Age": "86400",
+  const CORS = {
+    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+    'Access-Control-Max-Age': '86400',
   };
 
-  if (method === "OPTIONS") {
-    return new Response(null, { status: 204, headers: cors });
+  if (request.method === 'OPTIONS') {
+    return new Response(null, { status: 204, headers: CORS });
   }
+
+  const json = (data, status = 200) =>
+    new Response(JSON.stringify(data), {
+      status,
+      headers: { 'Content-Type': 'application/json', ...CORS },
+    });
+
+  const err = (msg, status = 400) => json({ error: msg }, status);
 
   try {
-    if (!env.DB) return json({ error: "Server misconfigured." }, 500, cors);
-    if (!env.JWT_SECRET) return json({ error: "Server misconfigured." }, 500, cors);
+    const db = env.DB;
+    if (!db) return err('Database binding missing', 500);
 
-    await ensureTables(env.DB);
-
-    // ── public routes ────────────────────────────────────────────────────────
-    if (path === "/api/auth/status" && method === "GET") {
-      return await authStatus(env, cors);
-    }
-    if (path === "/api/auth/setup" && method === "POST") {
-      return await authSetup(request, env, cors);
-    }
-    if (path === "/api/auth/login" && method === "POST") {
-      return await authLogin(request, env, cors);
+    // ── sha256 ────────────────────────────────────────────────
+    async function sha256(str) {
+      const buf = await crypto.subtle.digest(
+        'SHA-256',
+        new TextEncoder().encode(str)
+      );
+      return [...new Uint8Array(buf)]
+        .map((b) => b.toString(16).padStart(2, '0'))
+        .join('');
     }
 
-    // ── protected routes ─────────────────────────────────────────────────────
-    const auth = await requireAuth(request, env);
-    if (!auth.ok) return json({ error: "Unauthorized." }, 401, cors);
+    // ── JWT (HS256, hand-rolled) ──────────────────────────────
+    const JWT_SECRET = env.JWT_SECRET || 'cadence-dev-secret-change-me';
 
-    if (path === "/api/auth/me" && method === "GET") {
-      return json({ username: auth.username }, 200, cors);
+    function b64urlEncode(input) {
+      const arr =
+        input instanceof Uint8Array ? input : new Uint8Array(input);
+      let bin = '';
+      for (let i = 0; i < arr.length; i++) bin += String.fromCharCode(arr[i]);
+      return btoa(bin)
+        .replace(/\+/g, '-')
+        .replace(/\//g, '_')
+        .replace(/=+$/, '');
     }
-    if (path === "/api/state" && method === "GET") {
-      return await stateGet(env, cors);
+
+    function b64urlDecode(str) {
+      str = str.replace(/-/g, '+').replace(/_/g, '/');
+      while (str.length % 4) str += '=';
+      const bin = atob(str);
+      const arr = new Uint8Array(bin.length);
+      for (let i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i);
+      return arr;
     }
-    if (path === "/api/state" && method === "PUT") {
-      return await statePut(request, env, cors);
+
+    async function hmacKey() {
+      return crypto.subtle.importKey(
+        'raw',
+        new TextEncoder().encode(JWT_SECRET),
+        { name: 'HMAC', hash: 'SHA-256' },
+        false,
+        ['sign', 'verify']
+      );
     }
 
-    return json({ error: "Not found." }, 404, cors);
-  } catch {
-    return json({ error: "Something went wrong." }, 500, cors);
-  }
-}
+    async function signToken(payload) {
+      const header = { alg: 'HS256', typ: 'JWT' };
+      const h = b64urlEncode(new TextEncoder().encode(JSON.stringify(header)));
+      const p = b64urlEncode(new TextEncoder().encode(JSON.stringify(payload)));
+      const data = `${h}.${p}`;
+      const key = await hmacKey();
+      const sig = await crypto.subtle.sign(
+        'HMAC',
+        key,
+        new TextEncoder().encode(data)
+      );
+      return `${data}.${b64urlEncode(sig)}`;
+    }
 
-// ── schema ───────────────────────────────────────────────────────────────────
-async function ensureTables(db) {
-  await db.batch([
-    db.prepare(
-      `CREATE TABLE IF NOT EXISTS account (
-         id INTEGER PRIMARY KEY CHECK (id = 1),
-         username TEXT NOT NULL,
-         password_hash TEXT NOT NULL,
-         created_at TEXT NOT NULL,
-         updated_at TEXT NOT NULL
-       )`
-    ),
-    db.prepare(
-      `CREATE TABLE IF NOT EXISTS app_state (
-         id INTEGER PRIMARY KEY CHECK (id = 1),
-         data TEXT NOT NULL,
-         version INTEGER NOT NULL DEFAULT 1,
-         updated_at TEXT NOT NULL
-       )`
-    ),
-  ]);
-}
+    async function verifyToken(token) {
+      try {
+        const parts = String(token || '').split('.');
+        if (parts.length !== 3) return null;
+        const [h, p, s] = parts;
+        const key = await hmacKey();
+        const ok = await crypto.subtle.verify(
+          'HMAC',
+          key,
+          b64urlDecode(s),
+          new TextEncoder().encode(`${h}.${p}`)
+        );
+        if (!ok) return null;
+        const payload = JSON.parse(new TextDecoder().decode(b64urlDecode(p)));
+        if (payload.exp && Date.now() > payload.exp) return null;
+        return payload;
+      } catch {
+        return null;
+      }
+    }
 
-// ── handlers: auth ───────────────────────────────────────────────────────────
-async function authStatus(env, cors) {
-  const row = await env.DB.prepare(
-    "SELECT id FROM account WHERE id = 1"
-  ).first();
-  return json({ exists: !!row }, 200, cors);
-}
+    async function getUser(request) {
+      const auth = request.headers.get('Authorization') || '';
+      if (!auth.startsWith('Bearer ')) return null;
+      return verifyToken(auth.slice(7));
+    }
 
-async function authSetup(request, env, cors) {
-  const existing = await env.DB.prepare(
-    "SELECT id FROM account WHERE id = 1"
-  ).first();
-  if (existing) return json({ error: "Account already exists." }, 409, cors);
+    // ── ensure tables (idempotent per cold start) ────────────
+    await db
+      .prepare(
+        `CREATE TABLE IF NOT EXISTS users (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          username TEXT UNIQUE NOT NULL,
+          password_hash TEXT NOT NULL,
+          created_at INTEGER NOT NULL
+        )`
+      )
+      .run();
 
-  let body;
-  try {
-    body = await request.json();
-  } catch {
-    return json({ error: "Invalid request." }, 400, cors);
-  }
+    await db
+      .prepare(
+        `CREATE TABLE IF NOT EXISTS state (
+          user_id INTEGER PRIMARY KEY,
+          json_blob TEXT NOT NULL,
+          updated_at INTEGER NOT NULL
+        )`
+      )
+      .run();
 
-  const username = typeof body.username === "string" ? body.username.trim() : "";
-  const password = typeof body.password === "string" ? body.password : "";
-
-  if (username.length < 3 || username.length > 40) {
-    return json({ error: "Username must be 3–40 characters." }, 400, cors);
-  }
-  if (password.length < 6) {
-    return json({ error: "Password must be at least 6 characters." }, 400, cors);
-  }
-
-  const now = new Date().toISOString();
-  const hash = await sha256Hex(password);
-
-  await env.DB.prepare(
-    `INSERT INTO account (id, username, password_hash, created_at, updated_at)
-     VALUES (1, ?, ?, ?, ?)`
-  )
-    .bind(username, hash, now, now)
-    .run();
-
-  const token = await signToken({ sub: 1, username }, env.JWT_SECRET);
-  return json({ token, username }, 200, cors);
-}
-
-async function authLogin(request, env, cors) {
-  let body;
-  try {
-    body = await request.json();
-  } catch {
-    return json({ error: "Invalid request." }, 400, cors);
-  }
-
-  const username = typeof body.username === "string" ? body.username.trim() : "";
-  const password = typeof body.password === "string" ? body.password : "";
-
-  if (!username || !password) {
-    return json({ error: "Invalid username or password." }, 401, cors);
-  }
-
-  const row = await env.DB.prepare(
-    "SELECT username, password_hash FROM account WHERE id = 1"
-  ).first();
-
-  // Generic failure — never reveal whether the user or the password was wrong.
-  if (!row) return json({ error: "Invalid username or password." }, 401, cors);
-
-  const hash = await sha256Hex(password);
-  if (row.username !== username || row.password_hash !== hash) {
-    return json({ error: "Invalid username or password." }, 401, cors);
-  }
-
-  const token = await signToken({ sub: 1, username: row.username }, env.JWT_SECRET);
-  return json({ token, username: row.username }, 200, cors);
-}
-
-// ── handlers: state ──────────────────────────────────────────────────────────
-async function stateGet(env, cors) {
-  const row = await env.DB.prepare(
-    "SELECT data, version, updated_at FROM app_state WHERE id = 1"
-  ).first();
-
-  if (!row) {
-    return json({ data: null, version: 0, updated_at: null }, 200, cors);
-  }
-
-  let parsed;
-  try {
-    parsed = JSON.parse(row.data);
-  } catch {
-    return json({ error: "Stored state is corrupted." }, 500, cors);
-  }
-
-  return json(
-    { data: parsed, version: row.version, updated_at: row.updated_at },
-    200,
-    cors
-  );
-}
-
-async function statePut(request, env, cors) {
-  let body;
-  try {
-    body = await request.json();
-  } catch {
-    return json({ error: "Invalid request." }, 400, cors);
-  }
-
-  if (!body || typeof body.data !== "object" || body.data === null) {
-    return json({ error: "Invalid state payload." }, 400, cors);
-  }
-
-  const now = new Date().toISOString();
-  const serialized = JSON.stringify(body.data);
-
-  const existing = await env.DB.prepare(
-    "SELECT version FROM app_state WHERE id = 1"
-  ).first();
-  const nextVersion = (existing?.version || 0) + 1;
-
-  await env.DB.prepare(
-    `INSERT INTO app_state (id, data, version, updated_at)
-     VALUES (1, ?, ?, ?)
-     ON CONFLICT(id) DO UPDATE SET
-       data = excluded.data,
-       version = excluded.version,
-       updated_at = excluded.updated_at`
-  )
-    .bind(serialized, nextVersion, now)
-    .run();
-
-  return json({ ok: true, updated_at: now, version: nextVersion }, 200, cors);
-}
-
-// ── auth: token verification ─────────────────────────────────────────────────
-// Accepts the token from either the Authorization header (normal fetch calls)
-// or the ?token= query string (navigator.sendBeacon, which cannot set headers).
-async function requireAuth(request, env) {
-  let token = null;
-
-  const header = request.headers.get("Authorization") || "";
-  const m = header.match(/^Bearer\s+(.+)$/i);
-  if (m) {
-    token = m[1];
-  } else {
+    // ── route parsing ─────────────────────────────────────────
     const url = new URL(request.url);
-    token = url.searchParams.get("token");
+    let path = url.pathname.replace(/^\/api/, '');
+    if (path.length > 1 && path.endsWith('/')) path = path.slice(0, -1);
+    const method = request.method;
+
+    let body = {};
+    if (['POST', 'PUT', 'PATCH'].includes(method)) {
+      try {
+        body = await request.json();
+      } catch {
+        body = {};
+      }
+    }
+
+    // ══════════════════════════════════════════════════════════
+    // AUTH
+    // ══════════════════════════════════════════════════════════
+
+    if (method === 'GET' && path === '/auth/status') {
+      const row = await db.prepare('SELECT COUNT(*) AS n FROM users').first();
+      return json({ needs_setup: !row || Number(row.n) === 0 });
+    }
+
+    if (method === 'POST' && path === '/auth/setup') {
+      const row = await db.prepare('SELECT COUNT(*) AS n FROM users').first();
+      if (row && Number(row.n) > 0) return err('Account already exists', 403);
+
+      const username = String(body.username || '').trim().toLowerCase();
+      const password = String(body.password || '');
+
+      if (!/^[a-z0-9_]{3,32}$/.test(username))
+        return err('Username must be 3–32 chars: a–z, 0–9, _');
+      if (password.length < 4)
+        return err('Password must be at least 4 characters');
+
+      const hash = await sha256(password);
+      const now = Date.now();
+
+      const result = await db
+        .prepare(
+          'INSERT INTO users (username, password_hash, created_at) VALUES (?, ?, ?)'
+        )
+        .bind(username, hash, now)
+        .run();
+
+      const userId = result.meta && result.meta.last_row_id;
+      const token = await signToken({
+        id: userId,
+        username,
+        exp: now + 365 * 24 * 60 * 60 * 1000,
+      });
+
+      return json({ token, username, user_id: userId });
+    }
+
+    if (method === 'POST' && path === '/auth/login') {
+      const username = String(body.username || '').trim().toLowerCase();
+      const password = String(body.password || '');
+      if (!username || !password) return err('Username and password required');
+
+      const user = await db
+        .prepare('SELECT * FROM users WHERE username = ?')
+        .bind(username)
+        .first();
+
+      if (!user) return err('Invalid credentials', 401);
+
+      const hash = await sha256(password);
+      if (hash !== user.password_hash) return err('Invalid credentials', 401);
+
+      const token = await signToken({
+        id: user.id,
+        username: user.username,
+        exp: Date.now() + 365 * 24 * 60 * 60 * 1000,
+      });
+
+      return json({ token, username: user.username, user_id: user.id });
+    }
+
+    // ══════════════════════════════════════════════════════════
+    // STATE (JWT required)
+    // ══════════════════════════════════════════════════════════
+
+    if (method === 'GET' && path === '/state') {
+      const user = await getUser(request);
+      if (!user) return err('Unauthorized', 401);
+
+      const row = await db
+        .prepare('SELECT json_blob, updated_at FROM state WHERE user_id = ?')
+        .bind(user.id)
+        .first();
+
+      if (!row) return json({ state: null, updated_at: 0 });
+      return json({
+        state: JSON.parse(row.json_blob),
+        updated_at: row.updated_at,
+      });
+    }
+
+    if (method === 'PUT' && path === '/state') {
+      const user = await getUser(request);
+      if (!user) return err('Unauthorized', 401);
+
+      if (!body || typeof body.state !== 'object' || body.state === null)
+        return err('Missing state object');
+
+      const now = Date.now();
+      const blob = JSON.stringify(body.state);
+
+      await db
+        .prepare(
+          `INSERT INTO state (user_id, json_blob, updated_at)
+           VALUES (?, ?, ?)
+           ON CONFLICT(user_id) DO UPDATE SET
+             json_blob = excluded.json_blob,
+             updated_at = excluded.updated_at`
+        )
+        .bind(user.id, blob, now)
+        .run();
+
+      return json({ ok: true, updated_at: now });
+    }
+
+    return err('Not found', 404);
+  } catch (e) {
+    return json(
+      { error: 'Server error: ' + (e && e.message ? e.message : 'unknown') },
+      500
+    );
   }
-
-  if (!token) return { ok: false };
-
-  const payload = await verifyToken(token, env.JWT_SECRET);
-  if (!payload) return { ok: false };
-
-  const row = await env.DB.prepare(
-    "SELECT username FROM account WHERE id = 1"
-  ).first();
-  if (!row || row.username !== payload.username) return { ok: false };
-
-  return { ok: true, username: row.username };
-}
-
-// ── JWT (HS256 via crypto.subtle — no libraries) ─────────────────────────────
-function b64urlEncode(bytes) {
-  let str = "";
-  for (let i = 0; i < bytes.length; i++) str += String.fromCharCode(bytes[i]);
-  return btoa(str).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
-}
-
-function b64urlDecodeToString(input) {
-  let s = input.replace(/-/g, "+").replace(/_/g, "/");
-  while (s.length % 4) s += "=";
-  return atob(s);
-}
-
-async function hmacKey(secret) {
-  return crypto.subtle.importKey(
-    "raw",
-    enc.encode(secret),
-    { name: "HMAC", hash: "SHA-256" },
-    false,
-    ["sign", "verify"]
-  );
-}
-
-async function signToken(payload, secret) {
-  const header = { alg: "HS256", typ: "JWT" };
-  const now = Math.floor(Date.now() / 1000);
-  const full = { ...payload, iat: now, exp: now + TOKEN_TTL_SECONDS };
-
-  const h = b64urlEncode(enc.encode(JSON.stringify(header)));
-  const p = b64urlEncode(enc.encode(JSON.stringify(full)));
-  const data = `${h}.${p}`;
-
-  const key = await hmacKey(secret);
-  const sig = await crypto.subtle.sign("HMAC", key, enc.encode(data));
-  return `${data}.${b64urlEncode(new Uint8Array(sig))}`;
-}
-
-async function verifyToken(token, secret) {
-  if (typeof token !== "string") return null;
-  const parts = token.split(".");
-  if (parts.length !== 3) return null;
-
-  const [h, p, s] = parts;
-  const data = `${h}.${p}`;
-
-  let sigBytes;
-  try {
-    const raw = b64urlDecodeToString(s);
-    sigBytes = new Uint8Array(raw.length);
-    for (let i = 0; i < raw.length; i++) sigBytes[i] = raw.charCodeAt(i);
-  } catch {
-    return null;
-  }
-
-  const key = await hmacKey(secret);
-  const ok = await crypto.subtle.verify(
-    "HMAC",
-    key,
-    sigBytes,
-    enc.encode(data)
-  );
-  if (!ok) return null;
-
-  let payload;
-  try {
-    payload = JSON.parse(b64urlDecodeToString(p));
-  } catch {
-    return null;
-  }
-
-  if (typeof payload.exp !== "number") return null;
-  if (payload.exp < Math.floor(Date.now() / 1000)) return null;
-  return payload;
-}
-
-// ── password hashing (SHA-256 hex) ───────────────────────────────────────────
-async function sha256Hex(text) {
-  const buf = await crypto.subtle.digest("SHA-256", enc.encode(text));
-  const bytes = new Uint8Array(buf);
-  let out = "";
-  for (let i = 0; i < bytes.length; i++) {
-    out += bytes[i].toString(16).padStart(2, "0");
-  }
-  return out;
-}
-
-// ── helpers ──────────────────────────────────────────────────────────────────
-function json(obj, status, cors) {
-  return new Response(JSON.stringify(obj), {
-    status,
-    headers: {
-      "Content-Type": "application/json; charset=utf-8",
-      "Cache-Control": "no-store",
-      ...cors,
-    },
-  });
 }
