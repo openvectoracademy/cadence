@@ -39,7 +39,7 @@ nav{display:grid;gap:3px}.nav{background:transparent;border:0;color:#5f6368;text
 .settings{max-width:760px}.setting-row{display:flex;justify-content:space-between;gap:20px;align-items:center;padding:16px 0;border-bottom:1px solid var(--line)}.setting-row:last-child{border:0}.setting-row h3{margin:0;font-size:13px}.setting-row p{margin:4px 0 0;color:var(--muted);font-size:11px}.danger{color:var(--danger);border-color:#f2c7c5}
 .empty{padding:45px;text-align:center;color:var(--muted);border:1px dashed var(--line2);border-radius:12px}
 .toast{position:fixed;z-index:100;bottom:24px;right:24px;background:#202124;color:#fff;padding:11px 14px;border-radius:8px;opacity:0;transform:translateY(8px);pointer-events:none;transition:.18s;font-size:12px;box-shadow:0 4px 14px rgba(0,0,0,.18)}.toast.show{opacity:1;transform:none}
-@media(max-width:900px){.sidebar{transform:translateX(-100%);transition:.2s;box-shadow:4px 0 20px rgba(0,0,0,.12)}.sidebar.open{transform:none}.scrim{display:none;position:fixed;inset:0;background:rgba(0,0,0,.25);z-index:15}.scrim.show{display:block}.main{margin-left:0}.menu{display:block;margin-right:10px}.mobile-brand{display:block;font-weight:700;letter-spacing:.08em}.stats,.subject-grid{grid-template-columns:repeat(2,1fr)}header{padding:0 17px}#content{padding:27px 17px 50px}}
+@media(max-width:900px){.sidebar{transform:translateX(-100%);transition:.2s;box-shadow:4px 0 20px rgba(0,0,0,.12)}.sidebar.open{transform:none}.scrim{display:none;position:fixed;inset:0;background:rgba(0,0,0,.25);z-index:15}.scrim.show{display:block}.main{margin-left:0}.menu{display:block;margin-right:10px}.stats,.subject-grid{grid-template-columns:repeat(2,1fr)}header{padding:0 17px}#content{padding:27px 17px 50px}}
 @media(max-width:560px){.hero{align-items:flex-start;flex-direction:column}.hero h1{font-size:27px}.stats,.subject-grid,.final-grid{grid-template-columns:1fr}.resume{align-items:flex-start;flex-direction:column}.chapter{grid-template-columns:36px 1fr}.chapter .status{grid-column:2}.chapter{gap:9px}.stage{grid-template-columns:1fr}.toolbar{flex-direction:column}.search{min-width:0;width:100%}}
 
 .filter-panel{margin-bottom:18px;padding:14px}
@@ -217,11 +217,44 @@ button{touch-action:manipulation;-webkit-tap-highlight-color:transparent}
   text-align:center;
 }
 
+/* ══════════════════════════════════════════════════════════════
+   v10 Mobile header brand (logo + name)
+   ══════════════════════════════════════════════════════════════ */
+.mobile-brand{
+  display:none;
+  align-items:center;
+  gap:9px;
+  font-weight:700;
+  letter-spacing:.08em;
+  font-size:14px;
+  color:var(--text);
+  white-space:nowrap;
+  min-width:0;
+}
+.mobile-brand-logo{
+  display:block;
+  border-radius:7px;
+  object-fit:cover;
+  flex-shrink:0;
+  height:32px;
+  width:32px;
+}
+.mobile-brand-name{
+  display:inline-block;
+  line-height:1;
+}
+
+@media(max-width:900px){
+  .mobile-brand{display:flex}
+}
+
 @media(max-width:560px){
   .sync-pill{padding:6px 9px}
   .sync-pill span#syncLabel{display:none}
   .sync-pill i{width:8px;height:8px}
   .brand-logo{height:36px;border-radius:8px}
+  .mobile-brand{gap:8px;font-size:13px}
+  .mobile-brand-logo{height:30px;width:30px;border-radius:6px}
   .exam-countdown{
     grid-template-columns:repeat(4,1fr);
     gap:6px;
@@ -231,4 +264,8 @@ button{touch-action:manipulation;-webkit-tap-highlight-color:transparent}
   .exam-countdown span{font-size:8px;letter-spacing:.05em}
   .exam-card-top{flex-direction:column;align-items:stretch}
   .exam-card-top .secondary{width:100%;margin-top:8px}
+}
+
+@media(max-width:380px){
+  .mobile-brand-name{font-size:12px;letter-spacing:.06em}
 }
