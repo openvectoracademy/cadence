@@ -160,6 +160,61 @@ function esc(s) {
 function enc(s) { return encodeURIComponent(s); }
 function pct(a, b) { return b ? Math.round(a / b * 100) : 0; }
 
+// ── UI helpers: icons, greeting, page transition ──────────────
+const ICONS = {
+  dashboard: '<rect x="3" y="3" width="7" height="9" rx="1.6"/><rect x="14" y="3" width="7" height="5" rx="1.6"/><rect x="14" y="12" width="7" height="9" rx="1.6"/><rect x="3" y="16" width="7" height="5" rx="1.6"/>',
+  chapters: '<path d="M2 4.5h6A4 4 0 0 1 12 8.5V21a3 3 0 0 0-3-3H2z"/><path d="M22 4.5h-6A4 4 0 0 0 12 8.5V21a3 3 0 0 1 3-3h7z"/>',
+  finals: '<rect x="8" y="2" width="8" height="4" rx="1.2"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="m9 14 2 2 4-4"/>',
+  mock: '<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.2"/>',
+  exams: '<rect x="3" y="4" width="18" height="18" rx="2.6"/><path d="M16 2v4M8 2v4M3 10h18"/>',
+  progress: '<path d="M3 17l6-6 4 4 8-8"/><path d="M15 7h6v6"/>',
+  settings: '<path d="M21 6h-9M8 6H3M21 12h-3M14 12H3M21 18h-11M6 18H3"/><circle cx="10" cy="6" r="2"/><circle cx="16" cy="12" r="2"/><circle cx="8" cy="18" r="2"/>',
+  more: '<path d="M4 7h16M4 12h16M4 17h16"/>',
+  flame: '<path d="M12 22c4.4 0 7-2.9 7-6.5 0-2.4-1.3-4.2-2.6-5.6-.4 1.4-1.2 2.4-2.4 3 .3-3.4-1.3-6.4-4-8.9-.3 2.6-1.6 4.4-3 6.2C5.6 12 5 13.5 5 15.5 5 19.1 7.6 22 12 22z"/>',
+  check: '<circle cx="12" cy="12" r="9"/><path d="m8.5 12.5 2.5 2.5 4.5-5"/>',
+  hourglass: '<path d="M6 2h12M6 22h12"/><path d="M7 2v4a5 5 0 0 0 2 4l3 2-3 2a5 5 0 0 0-2 4v4"/><path d="M17 2v4a5 5 0 0 1-2 4l-3 2 3 2a5 5 0 0 1 2 4v4"/>'
+};
+function svg(name) {
+  return `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICONS[name] || ""}</svg>`;
+}
+function hydrateIcons() {
+  document.querySelectorAll("[data-icon]").forEach(el => { el.innerHTML = svg(el.dataset.icon); });
+}
+const PAGE_TITLES = {
+  dashboard: "Dashboard", chapters: "Chapters", chapter: "Chapter", finals: "Final Reviews",
+  mock: "Full Mock", exams: "Exam Dates", progress: "Study Streak & Time", settings: "Settings"
+};
+function syncNav() {
+  const key = page === "chapter" ? "chapters" : page;
+  document.querySelectorAll(".nav[data-page],.tab-item[data-page]").forEach(x => {
+    const on = x.dataset.page === key;
+    x.classList.toggle("active", on);
+    if (on) x.setAttribute("aria-current", "page"); else x.removeAttribute("aria-current");
+  });
+  const more = document.getElementById("tabMore");
+  if (more) more.classList.toggle("active", ["mock", "progress", "settings"].includes(key));
+  const t = document.getElementById("headerTitle");
+  if (t) t.textContent = PAGE_TITLES[page] || "Cadence";
+}
+function enter() {
+  const c = document.getElementById("content");
+  if (c) { c.classList.remove("enter"); void c.offsetWidth; c.classList.add("enter"); }
+  window.scrollTo(0, 0);
+}
+function greeting() {
+  const h = new Date().getHours();
+  return h < 5 ? "Late night" : h < 12 ? "Good morning" : h < 17 ? "Good afternoon" : h < 21 ? "Good evening" : "Good night";
+}
+function renderUser() {
+  try {
+    const u = JSON.parse(localStorage.getItem("site_user") || "null");
+    const name = u && u.username ? String(u.username) : "Cadence";
+    const av = document.getElementById("sideAvatar"), nm = document.getElementById("sideName");
+    if (av) av.textContent = name.charAt(0).toUpperCase();
+    if (nm) nm.textContent = name;
+  } catch {}
+}
+
 function today() {
   const d = new Date();
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
@@ -324,9 +379,9 @@ function removeExam(id) {
 function progressTimeView() {
   return `${pageHero("Progress & time", "Progress & Time", "Your study streak, daily exam activity, current time and study horizon in one place.", { target: "dashboard", label: "Dashboard" })}
   <div class="grid stats">
-    ${stat("Study Streak", studyStreak(), studyStreak() === 1 ? "day" : "days")}
-    ${stat("Daily Exams Today", Number(state.daily.byDate[today()] || 0), "today")}
-    ${stat("Daily Exams", Number(state.daily.total || 0), "overall")}
+    ${stat("Study Streak", studyStreak(), studyStreak() === 1 ? "day" : "days", undefined, "flame", "amber")}
+    ${stat("Daily Exams Today", Number(state.daily.byDate[today()] || 0), "today", undefined, "finals", "blue")}
+    ${stat("Daily Exams", Number(state.daily.total || 0), "overall", undefined, "check", "green")}
   </div>
   <div class="time-panel card">
     <div><div class="eyebrow">Current time</div><div class="live-date" data-live-date></div><div class="live-time" data-live-time></div></div>
@@ -347,15 +402,15 @@ function examsView() {
   const past = sorted.filter(e => !Number.isFinite(examDateValue(e)) || examDateValue(e) <= now);
 
   return `${pageHero("Schedule", "Upcoming Exams", "Every scheduled exam with its own live countdown. Soonest first.", { target: "dashboard", label: "Dashboard" })}
-  <div class="card" style="margin-bottom:18px;display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap">
+  <div class="card now-card">
     <div>
       <div class="eyebrow">Current time</div>
       <div class="live-date" data-live-date></div>
       <div class="live-time" data-live-time></div>
     </div>
-    <div style="text-align:right">
+    <div class="now-count">
       <div class="eyebrow">Active exams</div>
-      <div style="font-family:'DM Mono',monospace;font-size:24px;font-weight:500;margin-top:6px">${upcoming.length}</div>
+      <div class="now-num">${upcoming.length}</div>
       <div class="muted">countdown${upcoming.length === 1 ? '' : 's'} running</div>
     </div>
   </div>
@@ -432,12 +487,24 @@ function dashboard() {
     if (done(prog(c.id))) by[c.subject].done++;
   }
   const dailyToday = Number(state.daily.byDate[today()] || 0);
-  return `${pageHero("Admission command center", "Dashboard", "Track chapters, daily exams and every final/mock attempt.", null)}
+  const streak = studyStreak();
+  return `<div class="hero-card">
+    <div>
+      <div class="eyebrow">${greeting()}<span class="eb-extra"> · Admission command center</span></div>
+      <h1>Dashboard</h1>
+      <p>Track chapters, daily exams and every final/mock attempt.</p>
+      <div class="chips">
+        <span class="chip amber">${svg("flame")}${streak} day${streak === 1 ? "" : "s"} streak</span>
+        <span class="chip">${svg("finals")}${dailyToday} exam${dailyToday === 1 ? "" : "s"} today</span>
+      </div>
+    </div>
+    <div class="ring" style="--p:${t.percent}" role="img" aria-label="${t.percent}% of chapters complete"><div class="ring-in"><b>${t.percent}%</b><span>complete</span></div></div>
+  </div>
   <div class="grid stats">
-    ${stat("Completion", t.percent + "%", "of chapters", t.percent)}
-    ${stat("Chapters", t.complete + " / " + t.all.length, "completed")}
-    ${stat("Daily Exams", state.daily.total, "overall")}
-    ${stat("Study Streak", studyStreak(), studyStreak() === 1 ? "day" : "days")}
+    ${stat("Chapters", t.complete + " / " + t.all.length, "completed", pct(t.complete, t.all.length), "chapters", "blue")}
+    ${stat("Remaining", t.remaining, t.remaining === 1 ? "chapter" : "chapters", undefined, "hourglass", "red")}
+    ${stat("Daily Exams", state.daily.total, "overall", undefined, "finals", "green")}
+    ${stat("Study Streak", streak, streak === 1 ? "day" : "days", undefined, "flame", "amber")}
   </div>
   <div class="daily-alert card">
     <div><b>Daily Exam + Analysis</b><p>Every day, give at least one exam and do the error analysis. You can give multiple exams in one day.</p></div>
@@ -455,8 +522,8 @@ function dashboard() {
     <div class="card"><h3>Full Mock Tests</h3><div class="mock-total">${Number(state.mock || 0)}</div><div class="muted">mock tests given</div></div>
   </div>`;
 }
-function stat(a, b, c, p) {
-  return `<div class="card"><div class="stat-label">${a}</div><div class="stat-value">${b} <small>${c}</small></div>${p !== undefined ? `<div class="progress"><i style="width:${p}%"></i></div>` : ""}</div>`;
+function stat(a, b, c, p, icon, tone) {
+  return `<div class="card stat"><div class="stat-top"><div class="stat-label">${a}</div>${icon ? `<span class="stat-ico ${tone && tone !== "blue" ? tone : ""}">${svg(icon)}</span>` : ""}</div><div class="stat-value">${b} <small>${c}</small></div>${p !== undefined ? `<div class="progress"><i style="width:${p}%"></i></div>` : ""}</div>`;
 }
 function stageSummary(id) {
   const p = prog(id);
@@ -660,12 +727,14 @@ function openChapter(id) {
   page = "chapter";
   closeSidebar();
   render();
+  enter();
 }
 function filterSubject(n) {
   page = "chapters";
   activeChapter = null;
   closeSidebar();
   render();
+  enter();
   setTimeout(() => {
     const s = document.getElementById("subjectFilter");
     if (s) {
@@ -684,8 +753,8 @@ function go(p) {
   page = p;
   activeChapter = null;
   closeSidebar();
-  document.querySelectorAll(".nav").forEach(x => x.classList.toggle("active", x.dataset.page === p));
   render();
+  enter();
 }
 function toggle(id, k) { change(decodeURIComponent(id), p => p[k] = !p[k]); }
 function counter(id, k, d) { change(decodeURIComponent(id), p => p[k] = Math.max(0, Number(p[k] || 0) + d)); }
@@ -700,6 +769,7 @@ function render() {
     : page === "progress" ? progressTimeView()
     : settingsView();
   document.getElementById("content").innerHTML = h;
+  syncNav();
   if (page === "chapters") { updatePaperFilter(); renderChapters(); }
   if (page === "dashboard" || page === "progress" || page === "exams") startLive();
 }
@@ -760,7 +830,15 @@ function resetAll() {
 function toggleTheme() { toast("Light mode is always on"); }
 function applyTheme() { document.body.classList.add("light"); }
 
-document.querySelectorAll(".nav").forEach(b => b.onclick = () => go(b.dataset.page));
+document.querySelectorAll(".nav[data-page],.tab-item[data-page]").forEach(b => b.onclick = () => go(b.dataset.page));
+const tabMore = document.getElementById("tabMore");
+if (tabMore) tabMore.onclick = () => {
+  document.getElementById("sidebar").classList.add("open");
+  document.getElementById("scrim").classList.add("show");
+};
+document.addEventListener("keydown", e => { if (e.key === "Escape") closeSidebar(); });
+hydrateIcons();
+renderUser();
 const themeBtn = document.getElementById("themeBtn");
 if (themeBtn) themeBtn.style.display = "none";
 const menuBtn = document.getElementById("menuBtn");
