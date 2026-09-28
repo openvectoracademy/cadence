@@ -1,7 +1,7 @@
 // Cadence — safe service worker
-// Never fails a navigation. Network-first for HTML, cache-first for assets.
+// Never fails a navigation. Network-first for HTML, stale-while-revalidate for assets.
 
-const CACHE = 'cadence-v2';
+const CACHE = 'cadence-v3';
 const PRECACHE = [
   '/',
   '/index.html',
@@ -73,19 +73,18 @@ self.addEventListener('fetch', (e) => {
     return;
   }
 
-  // Cache-first for static assets
+  // Stale-while-revalidate for static assets: instant load, fresh next time
   e.respondWith(
-    caches.match(req).then((hit) => {
-      if (hit) return hit;
-      return fetch(req)
-        .then((res) => {
-          if (res.ok) {
-            const copy = res.clone();
-            caches.open(CACHE).then((c) => c.put(req, copy)).catch(() => {});
-          }
-          return res;
-        })
-        .catch(() => new Response('', { status: 504 }));
-    })
+    caches.open(CACHE).then((c) =>
+      c.match(req).then((hit) => {
+        const refresh = fetch(req)
+          .then((res) => {
+            if (res && res.ok) c.put(req, res.clone()).catch(() => {});
+            return res;
+          })
+          .catch(() => null);
+        return hit || refresh.then((res) => res || new Response('', { status: 504 }));
+      })
+    )
   );
 });
