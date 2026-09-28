@@ -3,8 +3,14 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="theme-color" content="#07101d">
+<meta name="theme-color" content="#1a73e8">
 <title>Cadence — Admission Progress</title>
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="apple-touch-icon" href="/images/home.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Cadence">
+<meta name="mobile-web-app-capable" content="yes">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Manrope:wght@400;500;600;700;800&family=Noto+Sans+Bengali:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="assets/style.css">
@@ -36,7 +42,7 @@
     <header>
       <button class="icon-btn menu" id="menuBtn" aria-label="Menu">☰</button>
       <div class="mobile-brand">
-        <img src="/images/home.png" height="32" alt="Cadence"
+        <img src="/images/home.png" alt="Cadence"
              onerror="this.style.display='none'"
              class="mobile-brand-logo">
         <span class="mobile-brand-name">CADENCE</span>
@@ -56,4 +62,11 @@
 <script>if(!localStorage.getItem('site_token'))location.replace('/login.html');</script>
 <script src="assets/data.js"></script>
 <script src="assets/app.js"></script>
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js').catch(() => {});
+  });
+}
+</script>
 </body></html>
