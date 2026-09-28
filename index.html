@@ -12,41 +12,46 @@
 <meta name="apple-mobile-web-app-title" content="Cadence">
 <meta name="mobile-web-app-capable" content="yes">
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Manrope:wght@400;500;600;700;800&family=Noto+Sans+Bengali:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="assets/style.css">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Manrope:wght@400;500;600;700;800&family=Noto+Sans+Bengali:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/style.css?v=11">
 </head>
 <body>
 <div id="app">
-  <aside class="sidebar" id="sidebar">
+  <aside class="sidebar" id="sidebar" aria-label="Main navigation">
     <div class="brand-row">
       <div class="brand">
-        <img src="/images/home.png" height="42" alt="Cadence" class="brand-logo"
-             onerror="this.replaceWith(Object.assign(document.createElement('div'),{className:'brand-mark',textContent:'C'}))">
-        <div><b>CADENCE</b><span>ADMISSION TRACKER</span></div>
+        <div class="logo"><img src="/images/home.png" alt="Cadence"
+             onerror="this.replaceWith(Object.assign(document.createElement('b'),{className:'logo-letter',textContent:'C'}))"></div>
+        <div class="brand-text"><b>CADENCE</b><span>ADMISSION TRACKER</span></div>
       </div>
       <button class="sidebar-close" id="sidebarClose" aria-label="Close menu">×</button>
     </div>
     <nav>
-      <button class="nav active" data-page="dashboard">Dashboard</button>
-      <button class="nav" data-page="chapters">Chapters</button>
-      <button class="nav" data-page="finals">Final Reviews</button>
-      <button class="nav" data-page="mock">Full Mock</button>
-      <button class="nav" data-page="exams">Exam Dates</button>
+      <button class="nav active" data-page="dashboard"><span class="ico" data-icon="dashboard"></span><span>Dashboard</span></button>
+      <button class="nav" data-page="chapters"><span class="ico" data-icon="chapters"></span><span>Chapters</span></button>
+      <button class="nav" data-page="finals"><span class="ico" data-icon="finals"></span><span>Final Reviews</span></button>
+      <button class="nav" data-page="mock"><span class="ico" data-icon="mock"></span><span>Full Mock</span></button>
+      <button class="nav" data-page="exams"><span class="ico" data-icon="exams"></span><span>Exam Dates</span></button>
       <div class="nav-section-label">Progress &amp; Time</div>
-      <button class="nav" data-page="progress">Study Streak &amp; Time</button>
-      <button class="nav" data-page="settings">Settings</button>
+      <button class="nav" data-page="progress"><span class="ico" data-icon="progress"></span><span>Study Streak &amp; Time</span></button>
+      <button class="nav" data-page="settings"><span class="ico" data-icon="settings"></span><span>Settings</span></button>
     </nav>
+    <div class="side-user">
+      <div class="avatar" id="sideAvatar">C</div>
+      <div><b id="sideName">Cadence</b><span><i class="dot"></i>Signed in</span></div>
+    </div>
   </aside>
   <div class="scrim" id="scrim"></div>
   <main class="main">
     <header>
       <button class="icon-btn menu" id="menuBtn" aria-label="Menu">☰</button>
       <div class="mobile-brand">
-        <img src="/images/home.png" alt="Cadence"
-             onerror="this.style.display='none'"
-             class="mobile-brand-logo">
+        <div class="logo sm"><img src="/images/home.png" alt="Cadence"
+             onerror="this.replaceWith(Object.assign(document.createElement('b'),{className:'logo-letter',textContent:'C'}))"></div>
         <span class="mobile-brand-name">CADENCE</span>
       </div>
+      <h2 class="header-title" id="headerTitle">Dashboard</h2>
       <div class="header-right">
         <span class="sync-pill" id="syncPill" data-status="idle" title="Cloud sync status">
           <i></i><span id="syncLabel">Ready</span>
@@ -54,14 +59,21 @@
         <button class="icon-btn" id="themeBtn" title="Theme">◐</button>
       </div>
     </header>
-    <section id="content"></section>
+    <section id="content" class="enter"></section>
   </main>
 </div>
 <footer class="site-footer"><b>Cadence</b><span>Study consistently. Improve daily.</span><span>© 2026</span></footer>
-<div class="toast" id="toast"></div>
+<div class="tabbar" id="tabbar" role="navigation" aria-label="Quick navigation">
+  <button class="tab-item active" data-page="dashboard"><span class="ico" data-icon="dashboard"></span><span>Home</span></button>
+  <button class="tab-item" data-page="chapters"><span class="ico" data-icon="chapters"></span><span>Chapters</span></button>
+  <button class="tab-item" data-page="finals"><span class="ico" data-icon="finals"></span><span>Finals</span></button>
+  <button class="tab-item" data-page="exams"><span class="ico" data-icon="exams"></span><span>Exams</span></button>
+  <button class="tab-item" id="tabMore" aria-label="More"><span class="ico" data-icon="more"></span><span>More</span></button>
+</div>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
 <script>if(!localStorage.getItem('site_token'))location.replace('/login.html');</script>
 <script src="assets/data.js"></script>
-<script src="assets/app.js"></script>
+<script src="assets/app.js?v=11"></script>
 <script>
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
