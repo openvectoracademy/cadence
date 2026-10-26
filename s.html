@@ -11,14 +11,17 @@
 button,input,textarea,select{font:inherit}button{cursor:pointer;border:1px solid var(--line);border-radius:10px;padding:10px 13px;background:var(--panel2);color:var(--text)}button:disabled{opacity:.4;cursor:not-allowed}button.primary{background:var(--blue);border-color:var(--blue);color:#fff;font-weight:700}button.danger{background:#381b2a;border-color:#703047;color:#ffdce1}button.ghost{background:transparent}.app{max-width:1500px;margin:auto;padding:16px;min-height:100vh}
 header{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:16px;flex-wrap:wrap}.brand{display:flex;align-items:center;gap:10px;font-size:19px;font-weight:800;letter-spacing:-.4px}.logo{width:35px;height:35px;border-radius:11px;background:linear-gradient(135deg,#6c8cff,#8c6cff);display:grid;place-items:center;font-weight:900}.sub{color:var(--muted);font-size:12px}.top-actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
 .layout{display:grid;grid-template-columns:190px minmax(0,1fr);gap:14px}.panel{background:var(--panel);border:1px solid var(--line);border-radius:16px;min-width:0}.side{padding:12px}.panel-title{font-size:12px;text-transform:uppercase;letter-spacing:1px;color:var(--muted);font-weight:750;margin:3px 0 12px}.slide-list{display:flex;flex-direction:column;gap:9px}.slide-card{padding:7px;border:1px solid transparent;border-radius:11px;background:#0d1424;text-align:left}.slide-card.active{border-color:var(--blue);background:#182440}.thumb{aspect-ratio:16/9;background:#fff;border-radius:6px;overflow:hidden;color:#172033;display:grid;place-items:center;padding:7px;font-size:11px;text-align:center}.slide-name{display:block;margin-top:6px;font-size:12px;color:#d9e2f6;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.add-slide{width:100%;margin-top:10px}.main{display:flex;flex-direction:column;gap:14px;min-width:0}.stage-panel{padding:12px}.stage-top{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px;flex-wrap:wrap}.status{display:flex;align-items:center;gap:7px;color:var(--muted);font-size:12px}.dot{width:8px;height:8px;border-radius:50%;background:#71809a}.dot.live{background:var(--red);box-shadow:0 0 0 4px #ff5f6d22;animation:pulse 1.2s infinite}@keyframes pulse{50%{opacity:.45}}
-.stage-wrap{width:100%;background:#070b14;border-radius:12px;padding:8px;display:grid;place-items:center}.stage{width:100%;aspect-ratio:16/9;max-height:66vh;background:#fff;overflow:hidden;position:relative;border-radius:4px;color:#111827}.stage-label{position:absolute;right:9px;bottom:7px;background:#0b1020b8;color:#fff;font-size:10px;border-radius:5px;padding:3px 6px;pointer-events:none;z-index:10}
+.stage-wrap{width:100%;background:#070b14;border-radius:12px;padding:8px;display:grid;place-items:center;position:relative;touch-action:none}.stage{width:100%;aspect-ratio:16/9;max-height:66vh;background:#fff;overflow:hidden;position:relative;border-radius:4px;color:#111827}.stage-label{position:absolute;right:9px;bottom:7px;background:#0b1020b8;color:#fff;font-size:10px;border-radius:5px;padding:3px 6px;pointer-events:none;z-index:10}
 .controls{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:11px}.controls .spacer{flex:1}.timer{font-variant-numeric:tabular-nums;font-weight:750;font-size:15px;min-width:58px}.small{font-size:12px;color:var(--muted)}
 .editor{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px;padding:14px}.field label{display:block;font-size:12px;font-weight:700;color:#bdc9df;margin-bottom:6px}.field textarea,.field input{width:100%;background:#0a1020;border:1px solid var(--line);border-radius:9px;color:#eaf0ff;padding:10px;outline:none}.field textarea{min-height:155px;resize:vertical;font:12px/1.55 ui-monospace,SFMono-Regular,Consolas,monospace}.field input:focus,.field textarea:focus{border-color:var(--blue)}.editor-actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding:0 14px 14px}.settings{display:flex;gap:10px;align-items:center;flex-wrap:wrap}.settings label{font-size:12px;color:var(--muted)}.settings select{background:#0a1020;color:var(--text);border:1px solid var(--line);border-radius:8px;padding:8px}.notice{padding:12px 14px;color:#b9c8e1;font-size:12px;line-height:1.6}.notice strong{color:#f0f5ff}.hidden{display:none!important}
 .toast{position:fixed;left:50%;bottom:18px;transform:translateX(-50%);background:#202d45;border:1px solid #405171;color:#fff;padding:11px 15px;border-radius:12px;box-shadow:0 8px 30px #0007;z-index:100000;max-width:90vw}
 
 /* Shadow DOM Container */
 #shadowContainer{width:100%;height:100%;display:block;background:#fff}
-#inkCanvas{position:absolute;inset:8px;width:calc(100% - 16px);height:calc(100% - 16px);pointer-events:auto;touch-action:none;z-index:3;border-radius:4px}
+
+/* Fixed Ink Canvas strictly inside the stage */
+#inkCanvas{position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:auto;touch-action:none;z-index:3;border-radius:4px}
+
 #inkToolbar{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-top:10px;padding:8px;background:#0d1424;border:1px solid var(--line);border-radius:12px}
 #inkToolbar button{padding:7px 9px;font-size:12px}
 #inkToolbar button.tool-active{background:#344a78;border-color:#8ca8ff;box-shadow:inset 0 0 0 1px #8ca8ff}
@@ -26,7 +29,7 @@ header{display:flex;align-items:center;justify-content:space-between;gap:12px;ma
 #inkToolbar input[type=range]{width:82px;accent-color:var(--blue)}
 #inkToolbar .tool-sep{height:22px;width:1px;background:var(--line);margin:0 2px}
 
-/* Preview Box */
+/* Live Preview Box */
 .preview-box{width:100%;margin-top:10px;border:1px solid var(--line);border-radius:8px;overflow:hidden;background:#000;display:flex;justify-content:center}
 #previewCanvas{width:100%;max-width:320px;height:auto;aspect-ratio:16/9;object-fit:contain}
 
@@ -71,13 +74,16 @@ body.pseudo-fs-body{overflow:hidden}
         <div><strong id="currentTitle">Welcome</strong><div class="sub">Recorded area · 16:9 presentation</div></div>
         <div class="status"><span id="recDot" class="dot"></span><span id="statusText">Ready to record</span></div>
       </div>
+      
+      <!-- Stage area -->
       <div class="stage-wrap">
         <div id="stage" class="stage">
           <div id="shadowContainer"></div>
+          <canvas id="inkCanvas" aria-label="Drawing layer"></canvas>
           <span class="stage-label">SLIDE AREA ONLY</span>
         </div>
-        <canvas id="inkCanvas" aria-label="Drawing layer"></canvas>
       </div>
+
       <div id="inkToolbar" aria-label="Slide annotation tools">
         <button data-tool="pen" class="tool-active">✎ Pen</button>
         <button data-tool="marker">▰ Marker</button>
@@ -96,7 +102,7 @@ body.pseudo-fs-body{overflow:hidden}
         <button id="recordBtn" class="primary">● Record</button><button id="pauseBtn" disabled>Pause</button><button id="stopBtn" class="danger" disabled>Stop &amp; export</button>
       </div>
       
-      <!-- LIVE PREVIEW BOX (Shows what the video sees) -->
+      <!-- LIVE PREVIEW BOX -->
       <div class="preview-box">
          <canvas id="previewCanvas" width="320" height="180"></canvas>
       </div>
@@ -136,7 +142,6 @@ let recording = false, paused = false;
 
 const $ = id => document.getElementById(id);
 const shadowHost = $('shadowContainer');
-let shadowRoot = null;
 
 function toast(msg){
   const t = $('toast'); t.textContent = msg; t.classList.remove('hidden');
@@ -149,11 +154,9 @@ function loadSlide(htmlStr) {
   shadowHost.innerHTML = '';
   const shadow = shadowHost.attachShadow({mode: 'open'});
   
-  // Parse the HTML string
   const parser = new DOMParser();
   const doc = parser.parseFromString(htmlStr, 'text/html');
   
-  // Extract styles and put them into the Shadow DOM
   const styles = doc.querySelectorAll('style');
   styles.forEach(style => {
     const s = document.createElement('style');
@@ -161,18 +164,15 @@ function loadSlide(htmlStr) {
     shadow.appendChild(s);
   });
   
-  // Extract body content and put it into the Shadow DOM
   const wrapper = document.createElement('div');
   wrapper.style.width = '100%'; wrapper.style.height = '100%';
   wrapper.innerHTML = doc.body.innerHTML;
   shadow.appendChild(wrapper);
   
-  // Ensure the wrapper takes up full space
   const styleOverride = document.createElement('style');
   styleOverride.textContent = `html,body { height:100%; margin:0; width:100%; }`;
   shadow.appendChild(styleOverride);
 
-  // Trigger redraw for ink canvas overlay
   setTimeout(resizeInk, 100);
 }
 
@@ -200,11 +200,9 @@ function renderList(){
 /* ============================ Frame Capture ============================ */
 async function drawFrame(ctx, canvas, previewCtx, previewCanvas){
   try {
-    // 1. Fill background
     ctx.fillStyle = '#ffffff';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-    // 2. Capture Shadow DOM
     const frame = await html2canvas(shadowHost, {
       backgroundColor: '#ffffff',
       scale: 1,
@@ -216,12 +214,10 @@ async function drawFrame(ctx, canvas, previewCtx, previewCanvas){
     
     ctx.drawImage(frame, 0, 0, canvas.width, canvas.height);
 
-    // 3. Draw Ink overlay
     if (inkCanvas.width > 1 && inkCanvas.height > 1) {
       ctx.drawImage(inkCanvas, 0, 0, inkCanvas.width, inkCanvas.height, 0, 0, canvas.width, canvas.height);
     }
 
-    // 4. Draw REC dot
     if (recording) {
       ctx.fillStyle = '#ff0000';
       ctx.beginPath();
@@ -229,7 +225,6 @@ async function drawFrame(ctx, canvas, previewCtx, previewCanvas){
       ctx.fill();
     }
 
-    // 5. Update the Live Preview Box so the user sees it working!
     if (previewCtx) {
       previewCtx.drawImage(canvas, 0, 0, previewCanvas.width, previewCanvas.height);
     }
@@ -388,10 +383,14 @@ function resizeInk(){
   if (old.width > 1 && old.height > 1) inkCtx.drawImage(old, 0, 0, old.width, old.height, 0, 0, r.width, r.height);
 }
 
+// Ensure the drawing position is perfectly calculated based on the white stage box
 function point(e){
   const r = inkCanvas.getBoundingClientRect();
   const dpr = Math.min(window.devicePixelRatio || 1, 2);
-  return { x: (e.clientX - r.left) / r.width * inkCanvas.width / dpr, y: (e.clientY - r.top) / r.height * inkCanvas.height / dpr };
+  return { 
+    x: (e.clientX - r.left) / r.width * inkCanvas.width / dpr, 
+    y: (e.clientY - r.top) / r.height * inkCanvas.height / dpr 
+  };
 }
 
 function setupStroke(){
@@ -403,6 +402,7 @@ function setupStroke(){
 }
 
 inkCanvas.addEventListener('pointerdown', e => {
+  if (!['pen','marker','eraser','line','rect','circle','arrow'].includes(tool)) return;
   e.preventDefault(); inkCanvas.setPointerCapture(e.pointerId); resizeInk();
   drawing = true; startPt = point(e); lastPt = startPt;
   savedInk = document.createElement('canvas'); savedInk.width = inkCanvas.width; savedInk.height = inkCanvas.height;
