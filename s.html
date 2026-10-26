@@ -32,7 +32,7 @@ header{display:flex;align-items:center;justify-content:space-between;gap:12px;ma
 .stage-panel:fullscreen .stage,.stage-panel:-webkit-full-screen .stage{max-height:calc(100vh - 150px)}
 .stage-panel:fullscreen .stage-top,.stage-panel:-webkit-full-screen .stage-top{padding:0 8px}
 
-/* Pseudo-fullscreen fallback (iOS Safari / any browser without Fullscreen API) */
+/* Pseudo-fullscreen fallback */
 #stagePanel.pseudo-fs{position:fixed;inset:0;z-index:99999;border-radius:0;background:#070b14;padding:8px;display:flex;flex-direction:column;justify-content:center}
 #stagePanel.pseudo-fs .stage-wrap{width:min(100vw,177.78vh);max-height:calc(100vh - 130px);margin:auto}
 #stagePanel.pseudo-fs .stage{max-height:calc(100vh - 150px)}
@@ -102,14 +102,13 @@ body.pseudo-fs-body{overflow:hidden}
       <div class="editor-actions"><button id="applyBtn" class="primary">Apply to slide</button><button id="deleteBtn">Delete slide</button><div class="settings"><label for="fps">Capture rate</label><select id="fps"><option value="15">15 FPS · smoother on phones</option><option value="30" selected>30 FPS · higher motion</option></select></div></div>
     </section>
     <section class="panel notice">
-      <strong>Android / 1080p notes:</strong> The presentation canvas is exported at 1920×1080. Recording is limited to the rectangle above; the editor, buttons, and slide list are not included. Android browsers commonly export <strong>WebM</strong>, not MP4. If MP4 is needed, convert the downloaded file with a video editor or encoder. Keep the screen awake and avoid switching apps during recording for best results.
+      <strong>Android / 1080p notes:</strong> The presentation is exported via Screen Share. Tap "Share your screen" when prompted. The video will record everything inside the slide frame. Android browsers export <strong>WebM</strong>, not MP4.
     </section>
   </main>
 </div>
 </div>
 <div id="toast" class="toast hidden" role="status"></div>
 
-<script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
 <script>
 /* ============================ Data ============================ */
 const starterSlides = [
@@ -134,9 +133,9 @@ slides = slides.map(s => {
 /* ============================ State ============================ */
 let current = 0;
 let recorder = null, chunks = [];
-let micStream = null, canvasStream = null;
+let micStream = null, displayStream = null;
 let timerStart = 0, elapsedBefore = 0;
-let timerInterval = null, renderInterval = null;
+let timerInterval = null;
 let recording = false, paused = false;
 
 const $ = id => document.getElementById(id);
@@ -147,7 +146,7 @@ function toast(msg){
   t.textContent = msg;
   t.classList.remove('hidden');
   clearTimeout(toast._t);
-  toast._t = setTimeout(() => t.classList.add('hidden'), 3200);
+  toast._t = setTimeout(() => t.classList.add('hidden'), 3500);
 }
 function esc(s){return String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]))}
 function docFor(s){
@@ -193,91 +192,53 @@ function persist(show = true){
   if (show) toast('Project saved on this device');
 }
 
-/* ============================ Frame capture ============================ */
-async function drawFrame(ctx, canvas){
-  try {
-    const frame = await html2canvas($('preview').contentDocument.body, {
-      backgroundColor: '#ffffff',
-      scale: 1,
-      width: 1920, height: 1080,
-      windowWidth: 1920, windowHeight: 1080,
-      logging: false,
-      useCORS: true
-    });
-    // Paint white background so no black frames leak through
-    ctx.fillStyle = '#ffffff';
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-    // Slide content
-    ctx.drawImage(frame, 0, 0, canvas.width, canvas.height);
-
-    // Ink overlay — scale its native pixel size into the 1920×1080 frame
-    if (inkCanvas.width > 1 && inkCanvas.height > 1) {
-      ctx.drawImage(inkCanvas, 0, 0, inkCanvas.width, inkCanvas.height, 0, 0, canvas.width, canvas.height);
-    }
-  } catch (e) {
-    console.error('drawFrame failed', e);
-  }
-}
-
 /* ============================ Recording ============================ */
 async function startRecording(){
-  if (!window.MediaRecorder || !HTMLCanvasElement.prototype.captureStream){
+  if (!window.MediaRecorder){
     toast('This browser does not support browser recording. Try updated Chrome.');
-    return;
-  }
-  if (typeof html2canvas === 'undefined'){
-    toast('Slide renderer did not load. Check internet and reload.');
     return;
   }
   try {
     $('recordBtn').disabled = true;
-    $('statusText').textContent = 'Requesting microphone…';
+    $('statusText').textContent = 'Requesting display & microphone…';
 
+    // 1. Get Microphone
     micStream = await navigator.mediaDevices.getUserMedia({
       audio: { echoCancellation:true, noiseSuppression:true, autoGainControl:true }
     });
 
-    const c = document.createElement('canvas');
-    c.width = 1920; c.height = 1080;
-    const ctx = c.getContext('2d', { alpha:false });
+    // 2. Get Screen Share (This is the only stable way to record on Android)
+    displayStream = await navigator.mediaDevices.getDisplayMedia({
+      video: { displaySurface: "browser", frameRate: 30 },
+      audio: false
+    });
 
-    // Give iframe time to settle before first capture
-    await new Promise(r => setTimeout(r, 300));
-    await drawFrame(ctx, c);
-
-    canvasStream = c.captureStream(Number($('fps').value));
-
-    const tracks = [...canvasStream.getVideoTracks(), ...micStream.getAudioTracks()];
+    // 3. Combine tracks
+    const tracks = [...displayStream.getVideoTracks(), ...micStream.getAudioTracks()];
     const combined = new MediaStream(tracks);
 
-    // Prefer VP8 on Android (faster), fall back to VP9, then plain WebM
-    const types = [
-      'video/webm;codecs=vp8,opus',
-      'video/webm;codecs=vp9,opus',
-      'video/webm'
-    ];
+    // Prefer VP8 on Android (faster), fall back to VP9
+    const types = ['video/webm;codecs=vp8,opus', 'video/webm;codecs=vp9,opus', 'video/webm'];
     const mime = types.find(t => MediaRecorder.isTypeSupported(t)) || '';
 
     recorder = new MediaRecorder(combined, mime
-      ? { mimeType: mime, videoBitsPerSecond: 8_000_000 }
-      : { videoBitsPerSecond: 8_000_000 }
+      ? { mimeType: mime, videoBitsPerSecond: 4_000_000 }
+      : { videoBitsPerSecond: 4_000_000 }
     );
     chunks = [];
 
     recorder.ondataavailable = e => {
-      if (e.data && e.data.size) chunks.push(e.data);
+      if (e.data && e.data.size > 0) chunks.push(e.data);
     };
 
     recorder.onstop = () => {
       if (!chunks.length){
-        toast('Recording had no data — try a longer recording.');
+        toast('Recording had no data. Try a longer recording.');
         cleanup();
         return;
       }
       const blob = new Blob(chunks, { type: recorder.mimeType || 'video/webm' });
-      console.log('Export size (bytes):', blob.size);
-
+      
       if (blob.size < 1000){
         toast('Export failed (empty file). Try again.');
         cleanup();
@@ -294,7 +255,12 @@ async function startRecording(){
       setTimeout(() => URL.revokeObjectURL(url), 60_000);
 
       cleanup();
-      toast('Recording exported. Check Downloads for the WebM video.');
+      toast('Recording exported. Check Downloads.');
+    };
+
+    // If user stops screen sharing via browser UI, trigger our stop
+    displayStream.getVideoTracks()[0].onended = () => {
+      if (recording) stopRecording();
     };
 
     recorder.start(1000);
@@ -303,24 +269,22 @@ async function startRecording(){
     timerStart = performance.now();
     elapsedBefore = 0;
 
-    renderInterval = setInterval(async () => {
-      if (recording && !paused) await drawFrame(ctx, c);
-    }, 1000 / Number($('fps').value));
-
     timerInterval = setInterval(tick, 250);
 
     $('pauseBtn').disabled = false;
     $('stopBtn').disabled = false;
     $('recordBtn').textContent = '● Recording';
     $('recDot').classList.add('live');
-    $('statusText').textContent = 'Recording slide area + microphone';
-    toast('Recording started');
+    $('statusText').textContent = 'Recording Screen + Mic';
+    toast('Recording started. Tap "Stop sharing" in your browser when done.');
   } catch (e){
     console.error(e);
     cleanup();
-    toast(e.name === 'NotAllowedError'
-      ? 'Microphone permission is required to record narration.'
-      : 'Could not start recording: ' + e.message);
+    if (e.name === 'NotAllowedError'){
+      toast('Permission denied. You must allow screen sharing and microphone.');
+    } else {
+      toast('Could not start: ' + e.message);
+    }
   }
 }
 
@@ -342,26 +306,30 @@ function pauseRecording(){
     timerStart = performance.now();
     paused = false;
     $('pauseBtn').textContent = 'Pause';
-    $('statusText').textContent = 'Recording slide area + microphone';
+    $('statusText').textContent = 'Recording Screen + Mic';
   }
 }
 
 function stopRecording(){
   if (!recorder || recorder.state === 'inactive') return;
 
-  // Force-flush any pending data before stopping
-  try { recorder.requestData(); } catch {}
+  recording = false;
+  clearInterval(timerInterval);
 
-  // If paused, resume so a final chunk is emitted
+  // Force the recorder to spit out the final chunk safely
   if (recorder.state === 'paused'){
     try { recorder.resume(); } catch {}
   }
 
-  recording = false;
-  clearInterval(renderInterval);
-  clearInterval(timerInterval);
+  try {
+    if (recorder.state !== 'inactive') recorder.stop();
+  } catch (e){
+    console.error(e);
+    cleanup();
+  }
 
-  try { recorder.stop(); } catch (e){ console.error(e); cleanup(); }
+  if (micStream) micStream.getTracks().forEach(t => t.stop());
+  if (displayStream) displayStream.getTracks().forEach(t => t.stop());
 
   $('stopBtn').disabled = true;
   $('pauseBtn').disabled = true;
@@ -374,18 +342,15 @@ function stopRecording(){
 function cleanup(){
   recording = false;
   paused = false;
-  clearInterval(renderInterval);
   clearInterval(timerInterval);
 
   if (micStream) micStream.getTracks().forEach(t => t.stop());
-  if (canvasStream) canvasStream.getTracks().forEach(t => t.stop());
+  if (displayStream) displayStream.getTracks().forEach(t => t.stop());
   micStream = null;
-  canvasStream = null;
+  displayStream = null;
 
-  if (recorder && recorder.state !== 'inactive'){
-    try { recorder.stop(); } catch {}
-  }
   recorder = null;
+  chunks = [];
 
   $('recordBtn').disabled = false;
   $('pauseBtn').disabled = true;
@@ -594,7 +559,7 @@ document.querySelectorAll('[data-tool]').forEach(b => {
 
 $('clearInk').onclick = () => inkCtx.clearRect(0, 0, inkCanvas.width, inkCanvas.height);
 
-/* ============================ Fullscreen (fixed) ============================ */
+/* ============================ Fullscreen ============================ */
 async function enterPseudoFullscreen(){
   $('stagePanel').classList.add('pseudo-fs');
   document.body.classList.add('pseudo-fs-body');
@@ -608,7 +573,7 @@ function exitPseudoFullscreen(){
   setTimeout(resizeInk, 150);
 }
 async function toggleFullscreen(){
-  const target = $('stagePanel'); // <- by id, this actually exists
+  const target = $('stagePanel');
   const isPseudo = target.classList.contains('pseudo-fs');
 
   if (isPseudo){ exitPseudoFullscreen(); return; }
@@ -621,7 +586,6 @@ async function toggleFullscreen(){
     return;
   }
 
-  // Try the real Fullscreen API first
   if (target.requestFullscreen){
     try {
       await target.requestFullscreen();
@@ -629,12 +593,9 @@ async function toggleFullscreen(){
       $('fullScreenBtn').textContent = '⛶ Exit full screen';
       setTimeout(resizeInk, 150);
       return;
-    } catch (e){
-      console.warn('Native fullscreen failed, using pseudo-fullscreen', e);
-    }
+    } catch (e){ console.warn('Native fullscreen failed', e); }
   }
 
-  // Fallback for iOS Safari / browsers without Fullscreen API
   enterPseudoFullscreen();
 }
 $('fullScreenBtn').onclick = toggleFullscreen;
